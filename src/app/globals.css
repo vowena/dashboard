@@ -61,11 +61,11 @@
 }
 
 .dark {
-  --bg-primary: #09090B;
-  --bg-surface: #111114;
-  --bg-elevated: #1A1A1E;
-  --border-default: #2B2A30;
-  --border-subtle: #1E1E22;
+  --bg-primary: #09090F;
+  --bg-surface: #0F0F16;
+  --bg-elevated: #14141C;
+  --border-default: #23223A;
+  --border-subtle: #1A1926;
   --text-primary: #F4F4F5;
   --text-secondary: #B0ADBF;
   --text-muted: #807C90;
