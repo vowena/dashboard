@@ -39,9 +39,9 @@ export default function Home() {
     <div className="flex flex-col flex-1">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <VowenaLogo />
+        <Link href="/"><VowenaLogo /></Link>
         <div className="flex items-center gap-5">
-          <Link href="https://vowena.xyz/docs" className="text-sm text-muted hover:text-foreground transition-colors flex items-center gap-1.5">
+          <Link href="/docs" className="text-sm text-muted hover:text-foreground transition-colors flex items-center gap-1.5">
             <BookIcon className="w-3.5 h-3.5" />
             Docs
           </Link>
@@ -89,7 +89,7 @@ export default function Home() {
             ) : (
               <>
                 <Button size="lg" onClick={connect}>Get started</Button>
-                <Link href="https://vowena.xyz/docs">
+                <Link href="/docs">
                   <Button variant="outline" size="lg">Read docs</Button>
                 </Link>
               </>
@@ -166,7 +166,7 @@ export default function Home() {
             {[
               { role: "Merchants", desc: "Create billing plans, manage subscribers, automate recurring charges with the dashboard or SDK.", href: "/merchant" },
               { role: "Subscribers", desc: "View and manage all subscriptions across every merchant. Cancel anytime, directly on-chain.", href: "/subscriptions" },
-              { role: "Developers", desc: "Install the SDK, integrate subscribe flows, run keeper bots. Everything is open source.", href: "https://vowena.xyz/docs" },
+              { role: "Developers", desc: "Install the SDK, integrate subscribe flows, run keeper bots. Everything is open source.", href: "/docs" },
             ].map((item) => (
               <Link key={item.role} href={item.href} className="group rounded-xl border border-border bg-elevated p-6 hover:border-accent/30 transition-colors">
                 <h3 className="text-sm font-semibold text-foreground mb-2 group-hover:text-accent transition-colors">{item.role}</h3>
@@ -180,13 +180,13 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-border mt-auto">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-muted">
+          <Link href="/" className="flex items-center gap-2 text-muted hover:text-foreground transition-colors">
             <VowenaSymbol className="w-4 h-4 text-accent" />
             <span className="font-mono text-xs">vowena</span>
             <span className="text-xs ml-2">Trustless payments on Stellar</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-5">
-            <Link href="https://vowena.xyz/docs" className="text-muted hover:text-foreground transition-colors" title="Documentation">
+            <Link href="/docs" className="text-muted hover:text-foreground transition-colors" title="Documentation">
               <BookIcon className="w-4 h-4" />
             </Link>
             <Link href="https://github.com/vowena" className="text-muted hover:text-foreground transition-colors" title="GitHub">
@@ -195,8 +195,8 @@ export default function Home() {
             <Link href="https://x.com/vowena" className="text-muted hover:text-foreground transition-colors" title="X (Twitter)">
               <XIcon className="w-4 h-4" />
             </Link>
-            <Link href="https://vowena.xyz/blog" className="text-xs text-muted hover:text-foreground transition-colors">Blog</Link>
-            <Link href="https://vowena.xyz/pricing" className="text-xs text-muted hover:text-foreground transition-colors">Pricing</Link>
+            <Link href="/blog" className="text-xs text-muted hover:text-foreground transition-colors">Blog</Link>
+            <Link href="/pricing" className="text-xs text-muted hover:text-foreground transition-colors">Pricing</Link>
           </div>
         </div>
       </footer>
