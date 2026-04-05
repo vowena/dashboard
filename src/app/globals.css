@@ -122,6 +122,10 @@ body {
 }
 
 /* Selection */
+button, [role="button"] {
+  cursor: pointer;
+}
+
 ::selection {
   background: var(--violet-100);
   color: var(--violet-900);
