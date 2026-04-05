@@ -10,14 +10,14 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, id, ...props }, ref) => {
-    const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
 
     return (
-      <div className="flex flex-col gap-1.5">
+      <div className="space-y-1.5">
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-zinc-300"
+            className="block text-xs font-medium text-secondary"
           >
             {label}
           </label>
@@ -26,18 +26,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            "flex h-10 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white",
-            "placeholder:text-zinc-500",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            error && "border-red-500 focus-visible:ring-red-500",
+            "flex h-9 w-full rounded-lg border bg-elevated px-3 text-sm text-foreground",
+            "placeholder:text-muted",
+            "focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent",
+            "transition-colors duration-150",
+            error ? "border-error" : "border-border",
             className,
           )}
           {...props}
         />
-        {error && (
-          <p className="text-xs text-red-400">{error}</p>
-        )}
+        {error && <p className="text-xs text-error">{error}</p>}
       </div>
     );
   },

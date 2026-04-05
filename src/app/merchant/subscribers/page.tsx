@@ -37,10 +37,10 @@ export default function SubscribersPage() {
   if (!isConnected) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <h2 className="text-xl font-semibold text-white">
+        <h2 className="text-xl font-semibold text-foreground">
           Connect wallet to view dashboard
         </h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted">
           Please connect your Stellar wallet to view subscribers.
         </p>
       </div>
@@ -54,9 +54,9 @@ export default function SubscribersPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-bold text-white">Subscribers</h1>
+      <h1 className="text-2xl font-bold text-foreground">Subscribers</h1>
 
-      <div className="flex gap-1 rounded-lg bg-zinc-950 p-1">
+      <div className="flex gap-1 rounded-lg bg-background p-1">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.value}
@@ -64,8 +64,8 @@ export default function SubscribersPage() {
             className={cn(
               "rounded-md px-4 py-2 text-sm font-medium transition-colors",
               filter === tab.value
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:text-zinc-200",
+                ? "bg-elevated text-foreground"
+                : "text-muted hover:text-zinc-200",
             )}
           >
             {tab.label}
@@ -74,9 +74,9 @@ export default function SubscribersPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 py-16">
-          <p className="text-zinc-400">No subscribers found.</p>
-          <p className="mt-1 text-sm text-zinc-600">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
+          <p className="text-muted">No subscribers found.</p>
+          <p className="mt-1 text-sm text-muted">
             Subscribers will appear here once users subscribe to your plans.
           </p>
         </div>
@@ -86,43 +86,43 @@ export default function SubscribersPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                  <tr className="border-b border-border">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">
                       Subscriber
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">
                       Plan
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">
                       Periods Billed
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">
                       Next Billing
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800">
+                <tbody className="divide-y divide-border">
                   {filtered.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-zinc-800/50">
-                      <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-zinc-300">
+                    <tr key={sub.id} className="hover:bg-elevated/50">
+                      <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-secondary">
                         {truncateAddress(sub.subscriberAddress)}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-zinc-300">
+                      <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-secondary">
                         {sub.planId.slice(0, 8)}...
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
                         <Badge variant={sub.status}>{sub.status}</Badge>
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-300">
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-secondary">
                         {sub.periodsBilled}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-300">
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-secondary">
                         {sub.nextBilling}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right">

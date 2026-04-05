@@ -1,26 +1,128 @@
 @import "tailwindcss";
 
+/* ============================================
+   Vowena Design Tokens
+   Brand: Violet primary, neutral with violet undertone, mint accent
+   Light-first design system
+   ============================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Violet (primary) */
+  --violet-50: #EDE9FF;
+  --violet-100: #D4CCFF;
+  --violet-200: #B5A8FF;
+  --violet-300: #9B85FF;
+  --violet-400: #8167FF;
+  --violet-500: #6B4EFF;
+  --violet-600: #5538E3;
+  --violet-700: #3F24C7;
+  --violet-800: #2D1A8A;
+  --violet-900: #1A0F52;
+
+  /* Neutral (violet undertone) */
+  --neutral-950: #08070E;
+  --neutral-900: #0E0D18;
+  --neutral-800: #161423;
+  --neutral-700: #1F1C30;
+  --neutral-600: #2D2945;
+  --neutral-500: #48436A;
+  --neutral-400: #6E6894;
+  --neutral-300: #9B95B8;
+  --neutral-200: #C5C0D8;
+  --neutral-100: #E8E5F0;
+  --neutral-50: #F6F4FA;
+
+  /* Mint (accent) */
+  --mint-100: #DBFFF0;
+  --mint-400: #34EDAA;
+  --mint-500: #00DC82;
+  --mint-600: #00B86B;
+
+  /* Semantic */
+  --error: #FF4D6A;
+  --warning: #FFBD2E;
+  --info: #6B9FFF;
+
+  /* ---- Light mode semantic tokens (default) ---- */
+  --bg-primary: #FEFCFF;
+  --bg-surface: #F6F4FA;
+  --bg-elevated: #FFFFFF;
+  --border-default: #E8E5F0;
+  --border-subtle: #F6F4FA;
+  --text-primary: #0E0D18;
+  --text-secondary: #48436A;
+  --text-muted: #6E6894;
+  --accent: #6B4EFF;
+  --accent-hover: #5538E3;
+  --accent-pressed: #3F24C7;
+  --accent-subtle: #EDE9FF;
+  --success: #00DC82;
+  --success-subtle: #DBFFF0;
+}
+
+.dark {
+  --bg-primary: #08070E;
+  --bg-surface: #0E0D18;
+  --bg-elevated: #161423;
+  --border-default: #1F1C30;
+  --border-subtle: #161423;
+  --text-primary: #F6F4FA;
+  --text-secondary: #9B95B8;
+  --text-muted: #6E6894;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Brand palette for Tailwind */
+  --color-violet-50: var(--violet-50);
+  --color-violet-100: var(--violet-100);
+  --color-violet-200: var(--violet-200);
+  --color-violet-300: var(--violet-300);
+  --color-violet-400: var(--violet-400);
+  --color-violet-500: var(--violet-500);
+  --color-violet-600: var(--violet-600);
+  --color-violet-700: var(--violet-700);
+  --color-violet-800: var(--violet-800);
+  --color-violet-900: var(--violet-900);
+
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-border: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-muted: var(--text-muted);
+  --color-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-pressed: var(--accent-pressed);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-mint-500: var(--mint-500);
+
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-space-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus rings */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--violet-100);
+  color: var(--violet-900);
 }

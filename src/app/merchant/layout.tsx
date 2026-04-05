@@ -4,6 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
+function VowenaSymbol() {
+  return (
+    <svg className="w-6 h-6 text-accent" viewBox="0 0 72 72" fill="none">
+      <path d="M12 16C12 16 24 48 36 56C48 48 60 16 60 16" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="36" cy="56" r="4" fill="currentColor"/>
+      <path d="M36 56C36 56 28 52 22 42" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.4"/>
+      <path d="M36 56C36 56 44 52 50 42" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.4"/>
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/merchant", label: "Overview" },
   { href: "/merchant/plans", label: "Plans" },
@@ -20,14 +31,21 @@ export default function MerchantLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen bg-zinc-900">
-      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950">
-        <div className="flex h-16 items-center gap-2 border-b border-zinc-800 px-6">
-          <span className="text-lg font-bold text-white">Vowena</span>
-          <span className="text-xs text-zinc-500">Merchant</span>
+    <div className="flex min-h-screen">
+      <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-border bg-elevated">
+        <div className="flex h-14 items-center gap-2.5 border-b border-border px-5">
+          <Link href="/" className="flex items-center gap-2">
+            <VowenaSymbol />
+            <span className="text-sm font-semibold text-foreground" style={{ letterSpacing: "-0.03em" }}>
+              vowena
+            </span>
+          </Link>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 p-4">
+        <nav className="flex flex-1 flex-col gap-0.5 p-3">
+          <p className="px-3 pt-2 pb-2 text-[11px] font-semibold uppercase tracking-widest text-muted">
+            Merchant
+          </p>
           {navItems.map((item) => {
             const isActive =
               item.href === "/merchant"
@@ -39,10 +57,10 @@ export default function MerchantLayout({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "rounded-lg px-3 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-indigo-600/20 text-indigo-400"
-                    : "text-zinc-400 hover:bg-zinc-800 hover:text-white",
+                    ? "bg-accent-subtle text-accent font-medium"
+                    : "text-secondary hover:bg-surface hover:text-foreground",
                 )}
               >
                 {item.label}
@@ -51,13 +69,13 @@ export default function MerchantLayout({
           })}
         </nav>
 
-        <div className="border-t border-zinc-800 p-4">
-          <p className="text-xs text-zinc-600">Stellar Recurring Payments</p>
+        <div className="border-t border-border p-4">
+          <p className="text-[11px] text-muted">Stellar Testnet</p>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+      <main className="flex-1 overflow-y-auto bg-background">
+        <div className="mx-auto max-w-5xl px-8 py-8">{children}</div>
       </main>
     </div>
   );

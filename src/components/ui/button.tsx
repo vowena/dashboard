@@ -8,21 +8,21 @@ type ButtonSize = "sm" | "default" | "lg";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:ring-indigo-500",
+    "bg-accent text-white hover:bg-accent-hover active:bg-accent-pressed",
   secondary:
-    "bg-zinc-700 text-white hover:bg-zinc-600 focus-visible:ring-zinc-500",
+    "bg-surface text-secondary border border-border hover:bg-accent-subtle hover:text-accent",
   destructive:
-    "bg-red-600 text-white hover:bg-red-500 focus-visible:ring-red-500",
+    "bg-error/10 text-error border border-error/20 hover:bg-error/20",
   ghost:
-    "bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white focus-visible:ring-zinc-500",
+    "bg-transparent text-secondary hover:bg-surface hover:text-foreground",
   outline:
-    "border border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white focus-visible:ring-zinc-500",
+    "border border-border bg-transparent text-secondary hover:bg-surface hover:text-foreground",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm",
-  default: "h-10 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
+  sm: "h-8 px-3 text-xs font-medium",
+  default: "h-9 px-4 text-sm font-medium",
+  lg: "h-11 px-6 text-sm font-medium",
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -36,9 +36,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-          "disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center gap-2 rounded-lg transition-all duration-150 cursor-pointer",
+          "disabled:pointer-events-none disabled:opacity-40",
           variantStyles[variant],
           sizeStyles[size],
           className,

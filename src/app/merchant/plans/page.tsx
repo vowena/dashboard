@@ -51,10 +51,10 @@ export default function PlansPage() {
   if (!isConnected) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <h2 className="text-xl font-semibold text-white">
+        <h2 className="text-xl font-semibold text-foreground">
           Connect wallet to view dashboard
         </h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted">
           Please connect your Stellar wallet to manage plans.
         </p>
       </div>
@@ -75,7 +75,7 @@ export default function PlansPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Your Plans</h1>
+        <h1 className="text-2xl font-bold text-foreground">Your Plans</h1>
         <Button onClick={() => setShowCreateForm((prev) => !prev)}>
           {showCreateForm ? "Cancel" : "Create Plan"}
         </Button>
@@ -111,7 +111,7 @@ export default function PlansPage() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="period"
-                  className="text-sm font-medium text-zinc-300"
+                  className="text-sm font-medium text-secondary"
                 >
                   Period
                 </label>
@@ -120,7 +120,7 @@ export default function PlansPage() {
                   name="period"
                   value={formData.period}
                   onChange={handleFieldChange}
-                  className="flex h-10 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+                  className="flex h-10 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
                 >
                   {PERIOD_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -175,9 +175,9 @@ export default function PlansPage() {
       )}
 
       {plans.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 py-16">
-          <p className="text-zinc-400">No plans created yet.</p>
-          <p className="mt-1 text-sm text-zinc-600">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
+          <p className="text-muted">No plans created yet.</p>
+          <p className="mt-1 text-sm text-muted">
             Create your first subscription plan to get started.
           </p>
         </div>
@@ -198,16 +198,16 @@ export default function PlansPage() {
               <CardContent>
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">Amount</span>
-                    <span className="text-white">{plan.amount} USDC</span>
+                    <span className="text-muted">Amount</span>
+                    <span className="text-foreground">{plan.amount} USDC</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">Period</span>
-                    <span className="text-white">{plan.period}</span>
+                    <span className="text-muted">Period</span>
+                    <span className="text-foreground">{plan.period}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">Active Subscribers</span>
-                    <span className="text-white">{plan.activeSubscribers}</span>
+                    <span className="text-muted">Active Subscribers</span>
+                    <span className="text-foreground">{plan.activeSubscribers}</span>
                   </div>
                   <div className="mt-2 flex gap-2">
                     <Button variant="outline" size="sm">

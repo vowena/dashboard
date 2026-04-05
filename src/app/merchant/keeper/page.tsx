@@ -35,10 +35,10 @@ export default function KeeperPage() {
   if (!isConnected) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <h2 className="text-xl font-semibold text-white">
+        <h2 className="text-xl font-semibold text-foreground">
           Connect wallet to view dashboard
         </h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted">
           Please connect your Stellar wallet to manage billing automation.
         </p>
       </div>
@@ -47,7 +47,7 @@ export default function KeeperPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-bold text-white">Billing Automation</h1>
+      <h1 className="text-2xl font-bold text-foreground">Billing Automation</h1>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
@@ -60,7 +60,7 @@ export default function KeeperPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-zinc-300">
+                <p className="text-sm text-secondary">
                   {autoBilling ? "Auto-billing is enabled" : "Auto-billing is disabled"}
                 </p>
               </div>
@@ -68,7 +68,7 @@ export default function KeeperPage() {
                 onClick={() => setAutoBilling((prev) => !prev)}
                 className={cn(
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors",
-                  autoBilling ? "bg-indigo-600" : "bg-zinc-700",
+                  autoBilling ? "bg-accent" : "bg-surface",
                 )}
                 role="switch"
                 aria-checked={autoBilling}
@@ -109,27 +109,27 @@ export default function KeeperPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted">
                 Last Run
               </p>
-              <p className="mt-1 text-sm text-white">
+              <p className="mt-1 text-sm text-foreground">
                 {keeperStatus.lastRun}
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted">
                 Next Scheduled Run
               </p>
-              <p className="mt-1 text-sm text-white">
+              <p className="mt-1 text-sm text-foreground">
                 {keeperStatus.nextScheduledRun}
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted">
                 Subscriptions Charged
               </p>
-              <p className="mt-1 text-sm text-white">
+              <p className="mt-1 text-sm text-foreground">
                 {keeperStatus.subscriptionsCharged}
               </p>
             </div>
@@ -144,24 +144,24 @@ export default function KeeperPage() {
         </CardHeader>
         <CardContent>
           {actions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 py-12">
-              <p className="text-zinc-400">No keeper actions recorded yet.</p>
-              <p className="mt-1 text-sm text-zinc-600">
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-12">
+              <p className="text-muted">No keeper actions recorded yet.</p>
+              <p className="mt-1 text-sm text-muted">
                 Actions will appear here after billing runs are triggered.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-800">
+            <div className="divide-y divide-border">
               {actions.map((action) => (
                 <div
                   key={action.id}
                   className="flex items-center justify-between py-3"
                 >
                   <div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-foreground">
                       {action.action}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted">
                       {action.subscriptionsCharged} subscription
                       {action.subscriptionsCharged !== 1 ? "s" : ""} charged
                     </p>
@@ -170,14 +170,14 @@ export default function KeeperPage() {
                     <p
                       className={cn(
                         "text-sm font-medium",
-                        action.status === "success" && "text-emerald-400",
-                        action.status === "partial" && "text-yellow-400",
-                        action.status === "failed" && "text-red-400",
+                        action.status === "success" && "text-success",
+                        action.status === "partial" && "text-warning",
+                        action.status === "failed" && "text-error",
                       )}
                     >
                       {action.status}
                     </p>
-                    <p className="text-xs text-zinc-500">{action.timestamp}</p>
+                    <p className="text-xs text-muted">{action.timestamp}</p>
                   </div>
                 </div>
               ))}

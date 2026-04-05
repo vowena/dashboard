@@ -194,10 +194,10 @@ export default function SubscriptionsPage() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-zinc-950 px-4 py-16">
+      <div className="min-h-screen bg-background px-4 py-16">
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="text-3xl font-bold text-white">My Subscriptions</h1>
-          <p className="mt-4 text-zinc-400">
+          <h1 className="text-3xl font-bold text-foreground">My Subscriptions</h1>
+          <p className="mt-4 text-muted">
             Connect wallet to view your subscriptions
           </p>
         </div>
@@ -208,15 +208,15 @@ export default function SubscriptionsPage() {
   // -- connected state --------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-16">
+    <div className="min-h-screen bg-background px-4 py-16">
       <div className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-bold text-white">My Subscriptions</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <h1 className="text-3xl font-bold text-foreground">My Subscriptions</h1>
+        <p className="mt-1 text-sm text-muted">
           Wallet: {truncateAddress(address ?? "")}
         </p>
 
         {subscriptions.length === 0 ? (
-          <p className="mt-12 text-center text-zinc-500">
+          <p className="mt-12 text-center text-muted">
             No subscriptions found.
           </p>
         ) : (
@@ -229,7 +229,7 @@ export default function SubscriptionsPage() {
                     <p className="text-sm font-medium text-amber-300">
                       Migration available &mdash; Review new plan
                       {sub.migrationPlanName && (
-                        <span className="text-amber-400">
+                        <span className="text-warning">
                           {" "}
                           ({sub.migrationPlanName})
                         </span>
@@ -261,7 +261,7 @@ export default function SubscriptionsPage() {
                       {sub.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-muted">
                     {truncateAddress(sub.merchantAddress)}
                   </p>
                 </CardHeader>
@@ -270,30 +270,30 @@ export default function SubscriptionsPage() {
                   {/* Key metrics */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div>
-                      <span className="text-zinc-500">Amount</span>
-                      <p className="font-medium text-white">
+                      <span className="text-muted">Amount</span>
+                      <p className="font-medium text-foreground">
                         {sub.amount} {sub.token}
                       </p>
                     </div>
                     <div>
-                      <span className="text-zinc-500">Period</span>
-                      <p className="font-medium text-white">{sub.period}</p>
+                      <span className="text-muted">Period</span>
+                      <p className="font-medium text-foreground">{sub.period}</p>
                     </div>
                     <div>
-                      <span className="text-zinc-500">Next billing</span>
-                      <p className="font-medium text-white">
+                      <span className="text-muted">Next billing</span>
+                      <p className="font-medium text-foreground">
                         {sub.nextBillingDate}
                       </p>
                     </div>
                     <div>
-                      <span className="text-zinc-500">Total paid</span>
-                      <p className="font-medium text-white">
+                      <span className="text-muted">Total paid</span>
+                      <p className="font-medium text-foreground">
                         {sub.totalPaid} {sub.token}
                       </p>
                     </div>
                     <div>
-                      <span className="text-zinc-500">Periods billed</span>
-                      <p className="font-medium text-white">
+                      <span className="text-muted">Periods billed</span>
+                      <p className="font-medium text-foreground">
                         {sub.periodsBilled}
                       </p>
                     </div>
@@ -323,15 +323,15 @@ export default function SubscriptionsPage() {
 
                   {/* Billing history */}
                   {expandedHistory.has(sub.id) && (
-                    <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-900/50">
+                    <div className="mt-2 rounded-lg border border-border bg-surface/50">
                       {sub.billingHistory.length === 0 ? (
-                        <p className="px-4 py-3 text-sm text-zinc-500">
+                        <p className="px-4 py-3 text-sm text-muted">
                           No billing records yet.
                         </p>
                       ) : (
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-zinc-800 text-left text-zinc-500">
+                            <tr className="border-b border-border text-left text-muted">
                               <th className="px-4 py-2 font-medium">#</th>
                               <th className="px-4 py-2 font-medium">Date</th>
                               <th className="px-4 py-2 font-medium">Amount</th>
@@ -342,18 +342,18 @@ export default function SubscriptionsPage() {
                             {sub.billingHistory.map((record) => (
                               <tr
                                 key={record.id}
-                                className="border-b border-zinc-800/50 last:border-0"
+                                className="border-b border-border/50 last:border-0"
                               >
-                                <td className="px-4 py-2 text-zinc-400">
+                                <td className="px-4 py-2 text-muted">
                                   {record.period}
                                 </td>
-                                <td className="px-4 py-2 text-white">
+                                <td className="px-4 py-2 text-foreground">
                                   {record.date}
                                 </td>
-                                <td className="px-4 py-2 text-white">
+                                <td className="px-4 py-2 text-foreground">
                                   {record.amount} {sub.token}
                                 </td>
-                                <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                <td className="px-4 py-2 font-mono text-xs text-muted">
                                   {record.txHash}
                                 </td>
                               </tr>
