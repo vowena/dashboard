@@ -29,9 +29,9 @@ export class KeeperService {
    * Find all subscriptions due for billing and attempt to charge them.
    */
   async chargeDue(
-    contractId: string,
-    rpcUrl: string,
-    signerSecret: string,
+    _contractId: string,
+    _rpcUrl: string,
+    _signerSecret: string,
   ): Promise<ChargeResult> {
     this.status.isRunning = true;
 

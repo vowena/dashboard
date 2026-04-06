@@ -1,20 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-
-  const _merchant = searchParams.get("merchant");
-  const _subscriber = searchParams.get("subscriber");
-  const _planId = searchParams.get("plan_id");
-  const _type = searchParams.get("type");
-  const _limit = searchParams.get("limit");
-  const _cursor = searchParams.get("cursor");
-
-  // TODO: Wire up to EventIndexer.getEvents() with filters
-  // const indexer = getIndexerInstance();
-  // const events = indexer.getEvents({
-  //   merchant, subscriber, planId, type, limit, cursor,
-  // });
+// TODO: Wire up to EventIndexer.getEvents() with filters from searchParams
+// (merchant, subscriber, plan_id, type, limit, cursor)
+export async function GET() {
 
   return NextResponse.json({
     events: [],
