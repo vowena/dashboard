@@ -47,7 +47,38 @@ export default function CheckoutPage() {
   const [subError, setSubError] = useState<string | null>(null);
   const [needsTrustline, setNeedsTrustline] = useState(false);
   const [isEstablishingTrustline, setIsEstablishingTrustline] = useState(false);
+  const [needsFunding, setNeedsFunding] = useState(false);
+  const [isFunding, setIsFunding] = useState(false);
+  const [fundingMessage, setFundingMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ subId: number } | null>(null);
+
+  const handleFund = async () => {
+    if (!address) return;
+    setIsFunding(true);
+    setSubError(null);
+    setFundingMessage(null);
+    try {
+      const res = await fetch("/api/faucet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Faucet request failed");
+      }
+      setFundingMessage(`Sent ${data.amount} ${data.asset}. Try Subscribe again.`);
+      setNeedsFunding(false);
+    } catch (err) {
+      setSubError(
+        err instanceof Error
+          ? `Couldn't fund wallet: ${err.message}`
+          : "Couldn't fund wallet",
+      );
+    } finally {
+      setIsFunding(false);
+    }
+  };
 
   const handleEstablishTrustline = async () => {
     if (!address) return;
@@ -121,6 +152,8 @@ export default function CheckoutPage() {
     if (!plan || !address) return;
     setSubError(null);
     setNeedsTrustline(false);
+    setNeedsFunding(false);
+    setFundingMessage(null);
     setIsSubscribing(true);
     try {
       const ledger = await getLatestLedger();
@@ -146,13 +179,21 @@ export default function CheckoutPage() {
       setSuccess({ subId: subId ?? 0 });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to subscribe";
-      // Stellar token contract returns Error(Contract, #13) when the user has
-      // no trustline for the asset. Detect that case and offer a 1-click fix.
+
+      // Stellar token contract returns Error(Contract, #13) for missing
+      // trustline and Error(Contract, #10) for insufficient balance.
       const isTrustlineErr =
         /trustline entry is missing/i.test(msg) ||
         /Error\(Contract, #13\)/.test(msg);
+      const isBalanceErr =
+        /resulting balance is not within the allowed range/i.test(msg) ||
+        /Error\(Contract, #10\)/.test(msg);
+
       if (isTrustlineErr) {
         setNeedsTrustline(true);
+        setSubError(null);
+      } else if (isBalanceErr) {
+        setNeedsFunding(true);
         setSubError(null);
       } else {
         setSubError(msg);
@@ -219,6 +260,10 @@ export default function CheckoutPage() {
             needsTrustline={needsTrustline}
             isEstablishingTrustline={isEstablishingTrustline}
             onEstablishTrustline={handleEstablishTrustline}
+            needsFunding={needsFunding}
+            isFunding={isFunding}
+            fundingMessage={fundingMessage}
+            onFund={handleFund}
             onSubscribe={handleSubscribe}
             onCancel={cancelUrl ? handleCancel : undefined}
             address={address}
@@ -253,6 +298,10 @@ function CheckoutBody({
   needsTrustline,
   isEstablishingTrustline,
   onEstablishTrustline,
+  needsFunding,
+  isFunding,
+  fundingMessage,
+  onFund,
   onSubscribe,
   onCancel,
   address,
@@ -268,6 +317,10 @@ function CheckoutBody({
   needsTrustline: boolean;
   isEstablishingTrustline: boolean;
   onEstablishTrustline: () => Promise<void>;
+  needsFunding: boolean;
+  isFunding: boolean;
+  fundingMessage: string | null;
+  onFund: () => Promise<void>;
   onSubscribe: () => void;
   onCancel?: () => void;
   address: string | null;
@@ -390,7 +443,43 @@ function CheckoutBody({
           </div>
         )}
 
-        {subError && !needsTrustline && (
+        {needsFunding && (
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangleIcon
+                size={14}
+                className="shrink-0 mt-0.5 text-warning"
+              />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-warning">
+                  Insufficient USDC balance
+                </p>
+                <p className="text-xs text-secondary leading-relaxed">
+                  Your wallet doesn&apos;t have enough USDC to be charged. On
+                  testnet, click below to receive 1000 test USDC.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={onFund}
+              disabled={isFunding}
+            >
+              {isFunding ? "Sending…" : "Get 1000 test USDC"}
+            </Button>
+          </div>
+        )}
+
+        {fundingMessage && (
+          <div className="rounded-lg border border-success/30 bg-success-subtle px-3 py-2.5 text-xs text-success flex items-start gap-2">
+            <CheckIcon size={14} className="shrink-0 mt-0.5" />
+            <span className="leading-relaxed">{fundingMessage}</span>
+          </div>
+        )}
+
+        {subError && !needsTrustline && !needsFunding && (
           <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2.5 text-xs text-error flex items-start gap-2">
             <AlertTriangleIcon size={14} className="shrink-0 mt-0.5" />
             <span className="leading-relaxed">{subError}</span>
@@ -412,14 +501,16 @@ function CheckoutBody({
             size="lg"
             className="w-full h-11 gap-2"
             onClick={onSubscribe}
-            disabled={isSubscribing || needsTrustline}
+            disabled={isSubscribing || needsTrustline || needsFunding}
           >
             {isSubscribing
               ? "Confirming…"
               : needsTrustline
                 ? "Establish trustline first"
-                : "Subscribe now"}
-            {!isSubscribing && !needsTrustline && (
+                : needsFunding
+                  ? "Fund wallet first"
+                  : "Subscribe now"}
+            {!isSubscribing && !needsTrustline && !needsFunding && (
               <ArrowRightIcon size={14} />
             )}
           </Button>
