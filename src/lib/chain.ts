@@ -1,15 +1,23 @@
-// SDK configuration
+import {
+  VowenaClient,
+  fromStroops,
+  SECONDS_PER_DAY,
+  type Plan as SdkPlan,
+  type Subscription as SdkSubscription,
+} from "@vowena/sdk";
+
 const CONTRACT_ID = "CAHGU3IPILE6P7PH324ZTDTYJNQAOGPYZAYLIBJQWPJBVBK4MVIMZQAR";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const PASSPHRASE = "Test SDF Network ; September 2015";
-const SECONDS_PER_DAY = 86400;
 
-export { SECONDS_PER_DAY };
+export const client = new VowenaClient({
+  contractId: CONTRACT_ID,
+  rpcUrl: RPC_URL,
+  networkPassphrase: PASSPHRASE,
+});
+
+export { SECONDS_PER_DAY, fromStroops };
 export const CONTRACT = { ID: CONTRACT_ID, RPC_URL, PASSPHRASE };
-
-export function fromStroops(stroops: number): number {
-  return stroops / 1e7;
-}
 
 export interface ChainPlan {
   id: number;
@@ -29,7 +37,7 @@ export interface ChainSubscription {
   id: number;
   planId: number;
   subscriber: string;
-  status: "Active" | "Paused" | "Cancelled" | "Expired" | string;
+  status: string;
   createdAt: number;
   periodsBilled: number;
   nextBillingTime: number;
@@ -38,33 +46,89 @@ export interface ChainSubscription {
   cancelledAt: number;
 }
 
-// Placeholder implementations - to be wired to vowena SDK
+function normalizePlan(plan: SdkPlan): ChainPlan {
+  return {
+    id: Number(plan.id),
+    merchant: String(plan.merchant),
+    token: String(plan.token),
+    amount: Number(plan.amount),
+    period: Number(plan.period),
+    trialPeriods: Number(plan.trialPeriods),
+    maxPeriods: Number(plan.maxPeriods),
+    gracePeriod: Number(plan.gracePeriod),
+    priceCeiling: Number(plan.priceCeiling),
+    createdAt: Number(plan.createdAt),
+    active: Boolean(plan.active),
+  };
+}
+
+function normalizeSub(sub: SdkSubscription): ChainSubscription {
+  return {
+    id: Number(sub.id),
+    planId: Number(sub.planId),
+    subscriber: String(sub.subscriber),
+    status: String(sub.status),
+    createdAt: Number(sub.createdAt),
+    periodsBilled: Number(sub.periodsBilled),
+    nextBillingTime: Number(sub.nextBillingTime),
+    failedAt: Number(sub.failedAt),
+    migrationTarget: Number(sub.migrationTarget),
+    cancelledAt: Number(sub.cancelledAt),
+  };
+}
+
 export async function getSubscriberSubscriptions(
-  _address: string,
+  address: string,
 ): Promise<number[]> {
-  return [];
+  try {
+    const subIds = await client.getSubscriberSubscriptions(address, address);
+    return subIds.map((id) => Number(id));
+  } catch (error) {
+    console.error("getSubscriberSubscriptions failed:", error);
+    return [];
+  }
 }
 
 export async function getSubscription(
   subId: number,
-  _subscriberAddress: string,
+  subscriberAddress: string,
 ): Promise<ChainSubscription> {
-  throw new Error(`getSubscription(${subId}) not implemented`);
+  const sub = await client.getSubscription(subId, subscriberAddress);
+  return normalizeSub(sub);
 }
 
 export async function getPlan(
   planId: number,
-  _merchantAddress: string,
+  merchantAddress: string,
 ): Promise<ChainPlan> {
-  throw new Error(`getPlan(${planId}) not implemented`);
+  const plan = await client.getPlan(planId, merchantAddress);
+  return normalizePlan(plan);
 }
 
 export async function getMerchantPlans(
-  _merchantAddress: string,
+  merchantAddress: string,
 ): Promise<number[]> {
-  return [];
+  try {
+    const planIds = await client.getMerchantPlans(
+      merchantAddress,
+      merchantAddress,
+    );
+    return planIds.map((id) => Number(id));
+  } catch (error) {
+    console.error("getMerchantPlans failed:", error);
+    return [];
+  }
 }
 
-export async function getPlanSubscribers(_planId: number): Promise<number[]> {
-  return [];
+export async function getPlanSubscribers(
+  planId: number,
+  callerAddress: string,
+): Promise<number[]> {
+  try {
+    const subIds = await client.getPlanSubscribers(planId, callerAddress);
+    return subIds.map((id) => Number(id));
+  } catch (error) {
+    console.error("getPlanSubscribers failed:", error);
+    return [];
+  }
 }
