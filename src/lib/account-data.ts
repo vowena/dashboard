@@ -17,6 +17,7 @@
 
 import {
   Account,
+  Asset,
   TransactionBuilder,
   Operation,
   Networks,
@@ -25,6 +26,68 @@ import {
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 const PASSPHRASE = Networks.TESTNET;
+
+/** Stellar testnet TUSDC issuer */
+export const TUSDC_ISSUER =
+  "GBAINHPXCOOQMUYL5AEOMLIXDDQJOMYPIO4KZXXSUSHMZWQVIQA4CFQV";
+export const TUSDC_CODE = "TUSDC";
+
+/**
+ * Check if a Stellar account has an established trustline for the given
+ * asset (issuer + code).
+ */
+export async function hasTrustline(
+  address: string,
+  assetCode: string,
+  assetIssuer: string,
+): Promise<boolean> {
+  try {
+    const account = await fetchAccount(address);
+    const balances =
+      (account as unknown as {
+        balances?: Array<{
+          asset_code?: string;
+          asset_issuer?: string;
+          asset_type?: string;
+        }>;
+      }).balances || [];
+    return balances.some(
+      (b) =>
+        b.asset_code === assetCode && b.asset_issuer === assetIssuer,
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Build an unsigned tx that establishes a trustline from the user's account
+ * to the given asset. Useful for first-time subscribers who need a USDC
+ * trustline before they can be debited.
+ */
+export async function buildTrustlineTx(
+  address: string,
+  assetCode: string,
+  assetIssuer: string,
+): Promise<string> {
+  const account = await fetchAccount(address);
+  if (account.sequence === "0") {
+    throw new Error("Account not found or unfunded.");
+  }
+  const source = new Account(address, account.sequence);
+  const tx = new TransactionBuilder(source, {
+    fee: BASE_FEE,
+    networkPassphrase: PASSPHRASE,
+  })
+    .addOperation(
+      Operation.changeTrust({
+        asset: new Asset(assetCode, assetIssuer),
+      }),
+    )
+    .setTimeout(30)
+    .build();
+  return tx.toXDR();
+}
 
 export interface OnChainProject {
   slot: number;

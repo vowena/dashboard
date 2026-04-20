@@ -7,7 +7,15 @@ import { useWallet } from "@/components/wallet/wallet-provider";
 import { getPlan, type ChainPlan } from "@/lib/chain";
 import { getLatestLedger, subscribeToPlan } from "@/lib/contract";
 import { decodePlanId } from "@/lib/plan-id-codec";
-import { readProjects } from "@/lib/account-data";
+import {
+  readProjects,
+  buildTrustlineTx,
+  submitToHorizon,
+  TUSDC_CODE,
+  TUSDC_ISSUER,
+} from "@/lib/account-data";
+import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk";
+import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { VowenaLogo } from "@/components/vowena-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -37,7 +45,32 @@ export default function CheckoutPage() {
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subError, setSubError] = useState<string | null>(null);
+  const [needsTrustline, setNeedsTrustline] = useState(false);
+  const [isEstablishingTrustline, setIsEstablishingTrustline] = useState(false);
   const [success, setSuccess] = useState<{ subId: number } | null>(null);
+
+  const handleEstablishTrustline = async () => {
+    if (!address) return;
+    setIsEstablishingTrustline(true);
+    setSubError(null);
+    try {
+      const xdr = await buildTrustlineTx(address, TUSDC_CODE, TUSDC_ISSUER);
+      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
+        networkPassphrase: Networks.TESTNET,
+        address,
+      });
+      await submitToHorizon(signedTxXdr);
+      setNeedsTrustline(false);
+    } catch (err) {
+      setSubError(
+        err instanceof Error
+          ? `Couldn't establish trustline: ${err.message}`
+          : "Couldn't establish trustline",
+      );
+    } finally {
+      setIsEstablishingTrustline(false);
+    }
+  };
 
   // Fetch plan on mount — uses a placeholder caller address since reads are public
   useEffect(() => {
@@ -87,6 +120,7 @@ export default function CheckoutPage() {
   const handleSubscribe = async () => {
     if (!plan || !address) return;
     setSubError(null);
+    setNeedsTrustline(false);
     setIsSubscribing(true);
     try {
       const ledger = await getLatestLedger();
@@ -111,7 +145,18 @@ export default function CheckoutPage() {
 
       setSuccess({ subId: subId ?? 0 });
     } catch (err) {
-      setSubError(err instanceof Error ? err.message : "Failed to subscribe");
+      const msg = err instanceof Error ? err.message : "Failed to subscribe";
+      // Stellar token contract returns Error(Contract, #13) when the user has
+      // no trustline for the asset. Detect that case and offer a 1-click fix.
+      const isTrustlineErr =
+        /trustline entry is missing/i.test(msg) ||
+        /Error\(Contract, #13\)/.test(msg);
+      if (isTrustlineErr) {
+        setNeedsTrustline(true);
+        setSubError(null);
+      } else {
+        setSubError(msg);
+      }
     } finally {
       setIsSubscribing(false);
     }
@@ -171,6 +216,9 @@ export default function CheckoutPage() {
             connect={connect}
             isSubscribing={isSubscribing}
             subError={subError}
+            needsTrustline={needsTrustline}
+            isEstablishingTrustline={isEstablishingTrustline}
+            onEstablishTrustline={handleEstablishTrustline}
             onSubscribe={handleSubscribe}
             onCancel={cancelUrl ? handleCancel : undefined}
             address={address}
@@ -202,6 +250,9 @@ function CheckoutBody({
   connect,
   isSubscribing,
   subError,
+  needsTrustline,
+  isEstablishingTrustline,
+  onEstablishTrustline,
   onSubscribe,
   onCancel,
   address,
@@ -214,6 +265,9 @@ function CheckoutBody({
   connect: () => Promise<void>;
   isSubscribing: boolean;
   subError: string | null;
+  needsTrustline: boolean;
+  isEstablishingTrustline: boolean;
+  onEstablishTrustline: () => Promise<void>;
   onSubscribe: () => void;
   onCancel?: () => void;
   address: string | null;
@@ -305,7 +359,38 @@ function CheckoutBody({
 
       {/* Action area */}
       <div className="px-6 sm:px-8 py-6 space-y-3">
-        {subError && (
+        {needsTrustline && (
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangleIcon
+                size={14}
+                className="shrink-0 mt-0.5 text-warning"
+              />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-warning">
+                  USDC trustline required
+                </p>
+                <p className="text-xs text-secondary leading-relaxed">
+                  Your wallet needs to opt in to USDC before it can be debited.
+                  This is a one-time, free Stellar transaction.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={onEstablishTrustline}
+              disabled={isEstablishingTrustline}
+            >
+              {isEstablishingTrustline
+                ? "Establishing…"
+                : "Establish USDC trustline"}
+            </Button>
+          </div>
+        )}
+
+        {subError && !needsTrustline && (
           <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2.5 text-xs text-error flex items-start gap-2">
             <AlertTriangleIcon size={14} className="shrink-0 mt-0.5" />
             <span className="leading-relaxed">{subError}</span>
@@ -327,10 +412,16 @@ function CheckoutBody({
             size="lg"
             className="w-full h-11 gap-2"
             onClick={onSubscribe}
-            disabled={isSubscribing}
+            disabled={isSubscribing || needsTrustline}
           >
-            {isSubscribing ? "Confirming…" : "Subscribe now"}
-            {!isSubscribing && <ArrowRightIcon size={14} />}
+            {isSubscribing
+              ? "Confirming…"
+              : needsTrustline
+                ? "Establish trustline first"
+                : "Subscribe now"}
+            {!isSubscribing && !needsTrustline && (
+              <ArrowRightIcon size={14} />
+            )}
           </Button>
         )}
 

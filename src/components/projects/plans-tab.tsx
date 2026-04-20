@@ -392,13 +392,21 @@ function CreatePlanForm({
       </div>
 
       <div className="mt-4">
-        <Field label="Token contract">
-          <Input
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="font-mono text-xs"
-          />
-        </Field>
+        <details className="group">
+          <summary className="text-xs text-muted hover:text-foreground transition-colors cursor-pointer select-none list-none flex items-center gap-1.5">
+            <span className="transition-transform group-open:rotate-90">›</span>
+            Advanced
+          </summary>
+          <div className="mt-3 pt-3 border-t border-border-subtle">
+            <Field label="Token contract" hint="Stellar SAC for the asset to bill in. Defaults to TUSDC on testnet.">
+              <Input
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className="font-mono text-xs"
+              />
+            </Field>
+          </div>
+        </details>
       </div>
 
       <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-border-subtle">
