@@ -36,15 +36,19 @@ export interface OnChainWorkspace {
 
 interface HorizonAccount {
   sequence: string;
-  data_attr?: Record<string, string>;
+  /** Raw Horizon JSON uses `data` (not `data_attr` which is an SDK alias). */
+  data?: Record<string, string>;
 }
 
 async function fetchAccount(address: string): Promise<HorizonAccount> {
-  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  // Cache-bust so we never get stale account data right after a write.
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`, {
+    cache: "no-store",
+  });
   if (!res.ok) {
     if (res.status === 404) {
       // Account doesn't exist (unfunded). Treat as empty.
-      return { sequence: "0", data_attr: {} };
+      return { sequence: "0", data: {} };
     }
     throw new Error(`Horizon fetch failed: ${res.status}`);
   }
@@ -71,7 +75,7 @@ export async function readWorkspaces(
 ): Promise<OnChainWorkspace[]> {
   try {
     const account = await fetchAccount(address);
-    const data: Record<string, string> = account.data_attr || {};
+    const data: Record<string, string> = account.data || {};
     const workspaces = new Map<number, OnChainWorkspace>();
 
     // Pass 1: find workspace names — match `vw{slot}` but NOT `vw{slot}d` or `vw{slot}p*`
