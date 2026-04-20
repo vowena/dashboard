@@ -27,21 +27,29 @@ export default function SubscriptionsPage() {
     <>
       {/* Top bar */}
       <div className="sticky top-0 z-40 border-b border-border bg-elevated/80 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-8">
             <VowenaLogo size="sm" />
-            {address && (
-              <div className="text-xs font-mono text-muted">
-                {address.slice(0, 8)}...{address.slice(-8)}
-              </div>
-            )}
+            <nav className="hidden sm:flex items-center gap-6">
+              <a href="/subscriptions" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
+                My Subscriptions
+              </a>
+              <a href="/workspaces" className="text-sm text-secondary hover:text-foreground transition-colors">
+                Workspaces
+              </a>
+            </nav>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
             {address && (
-              <Button variant="ghost" size="sm" onClick={disconnect}>
-                Disconnect
-              </Button>
+              <>
+                <div className="text-xs font-mono text-muted hidden sm:block">
+                  {address.slice(0, 8)}...{address.slice(-8)}
+                </div>
+                <Button variant="ghost" size="sm" onClick={disconnect}>
+                  Disconnect
+                </Button>
+              </>
             )}
           </div>
         </div>

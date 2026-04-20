@@ -24,48 +24,74 @@ export default function WorkspacesPage() {
       <>
         {/* Top bar */}
         <div className="sticky top-0 z-40 border-b border-border bg-elevated/80 backdrop-blur-xl">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <VowenaLogo size="sm" />
-            </div>
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <VowenaLogo size="sm" />
             <div className="flex items-center gap-4">
               <ThemeToggle />
-              <Button variant="ghost" size="sm" onClick={disconnect}>
-                Disconnect
-              </Button>
+              {address && (
+                <>
+                  <div className="text-xs font-mono text-muted">
+                    {address.slice(0, 8)}...{address.slice(-8)}
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={disconnect}>
+                    Disconnect
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Pro gate overlay */}
-        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
-          <Card className="w-full max-w-md">
-            <div className="p-8 text-center">
-              <div className="text-4xl mb-4">⭐</div>
-              <h2 className="text-2xl font-semibold text-foreground mb-3">
-                Upgrade to Pro
-              </h2>
-              <p className="text-secondary text-sm mb-6 leading-relaxed">
-                Workspaces and merchant features are available in Vowena Pro.
-                Upgrade now to start billing your customers.
+        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-2xl">
+            {/* Header section with accent line */}
+            <div className="text-center mb-12">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent mb-4">
+                UNLOCK MERCHANT FEATURES
               </p>
+              <h1 className="text-4xl sm:text-5xl font-semibold text-foreground mb-4 leading-tight">
+                Ready to accept{" "}
+                <span className="serif-italic text-accent text-[1.08em]">
+                  payments?
+                </span>
+              </h1>
+              <p className="text-lg text-secondary max-w-xl mx-auto">
+                Start your merchant journey with Vowena Pro. Create unlimited
+                workspaces, set custom billing, and grow with your customers.
+              </p>
+            </div>
 
-              <div className="bg-accent-subtle rounded-lg p-4 mb-6 text-sm text-accent mb-6">
-                <p className="font-medium mb-2">Pro includes:</p>
-                <ul className="text-left text-xs space-y-1">
-                  <li>✓ Unlimited workspaces</li>
-                  <li>✓ Custom billing plans</li>
-                  <li>✓ Advanced analytics</li>
-                  <li>✓ Dedicated support</li>
-                </ul>
-              </div>
+            {/* Feature grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              {[
+                { icon: "📋", label: "Unlimited Workspaces" },
+                { icon: "💰", label: "Custom Plans" },
+                { icon: "📊", label: "Analytics" },
+              ].map((feature) => (
+                <Card key={feature.label} className="p-6 text-center">
+                  <div className="text-3xl mb-3">{feature.icon}</div>
+                  <p className="font-medium text-foreground text-sm">
+                    {feature.label}
+                  </p>
+                </Card>
+              ))}
+            </div>
 
-              <Button className="w-full mb-3">Upgrade to Pro</Button>
-              <Button variant="ghost" className="w-full">
-                Waitlist
+            {/* CTA */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" className="sm:px-8">
+                Upgrade to Pro
+              </Button>
+              <Button variant="outline" size="lg" className="sm:px-8">
+                Learn more
               </Button>
             </div>
-          </Card>
+
+            <p className="text-center text-xs text-muted mt-6">
+              Beta access is free. Upgrade now to get started immediately.
+            </p>
+          </div>
         </div>
       </>
     );
@@ -76,18 +102,30 @@ export default function WorkspacesPage() {
     <>
       {/* Top bar */}
       <div className="sticky top-0 z-40 border-b border-border bg-elevated/80 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-8">
             <VowenaLogo size="sm" />
-            <div className="text-xs font-mono text-muted">
-              {address.slice(0, 8)}...{address.slice(-8)}
-            </div>
+            <nav className="hidden sm:flex items-center gap-6">
+              <a href="/subscriptions" className="text-sm text-secondary hover:text-foreground transition-colors">
+                My Subscriptions
+              </a>
+              <a href="/workspaces" className="text-sm font-medium text-foreground">
+                Workspaces
+              </a>
+            </nav>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={disconnect}>
-              Disconnect
-            </Button>
+            {address && (
+              <>
+                <div className="text-xs font-mono text-muted hidden sm:block">
+                  {address.slice(0, 8)}...{address.slice(-8)}
+                </div>
+                <Button variant="ghost" size="sm" onClick={disconnect}>
+                  Disconnect
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

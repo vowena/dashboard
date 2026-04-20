@@ -59,17 +59,34 @@ export default function WorkspaceDashboardPage() {
       {/* Top bar */}
       <div className="sticky top-0 z-40 border-b border-border bg-elevated/80 backdrop-blur-xl">
         <div className="max-w-full mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <VowenaLogo size="sm" />
-            <h1 className="text-lg font-semibold text-foreground hidden sm:block">
-              {workspace.name}
-            </h1>
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4">
+              <VowenaLogo size="sm" />
+              <h1 className="text-lg font-semibold text-foreground hidden sm:block">
+                {workspace.name}
+              </h1>
+            </div>
+            <nav className="hidden sm:flex items-center gap-6 text-sm">
+              <a href="/subscriptions" className="text-secondary hover:text-foreground transition-colors">
+                My Subscriptions
+              </a>
+              <a href="/workspaces" className="text-secondary hover:text-foreground transition-colors">
+                Workspaces
+              </a>
+            </nav>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={disconnect}>
-              Disconnect
-            </Button>
+            {address && (
+              <>
+                <div className="text-xs font-mono text-muted hidden sm:block">
+                  {address.slice(0, 8)}...{address.slice(-8)}
+                </div>
+                <Button variant="ghost" size="sm" onClick={disconnect}>
+                  Disconnect
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
