@@ -6,7 +6,7 @@ import {
   type Subscription as SdkSubscription,
 } from "@vowena/sdk";
 
-const CONTRACT_ID = "CAHGU3IPILE6P7PH324ZTDTYJNQAOGPYZAYLIBJQWPJBVBK4MVIMZQAR";
+const CONTRACT_ID = "CBENQGQPLC3CKU5HCRZPBIT6RSZVLUJKUCVPJFJGYJ3OXEW7BZCXULC2";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const PASSPHRASE = "Test SDF Network ; September 2015";
 

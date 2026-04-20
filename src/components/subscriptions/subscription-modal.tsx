@@ -238,9 +238,9 @@ export function SubscriptionModal({
                 />
                 <DetailRow
                   label="Contract"
-                  value="CAHGU3IPILE6P7PH324ZTDTYJNQAOGPYZAYLIBJQWPJBVBK4MVIMZQAR"
+                  value="CBENQGQPLC3CKU5HCRZPBIT6RSZVLUJKUCVPJFJGYJ3OXEW7BZCXULC2"
                   copyable
-                  external={`https://stellar.expert/explorer/testnet/contract/CAHGU3IPILE6P7PH324ZTDTYJNQAOGPYZAYLIBJQWPJBVBK4MVIMZQAR`}
+                  external={`https://stellar.expert/explorer/testnet/contract/CBENQGQPLC3CKU5HCRZPBIT6RSZVLUJKUCVPJFJGYJ3OXEW7BZCXULC2`}
                 />
               </div>
             )}

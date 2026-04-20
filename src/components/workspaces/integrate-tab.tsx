@@ -43,7 +43,7 @@ export function IntegrateTab({ workspace, plans }: IntegrateTabProps) {
             code={`import { VowenaClient } from "@vowena/sdk";
 
 const vowena = new VowenaClient({
-  contractId: "CAHGU3IPILE6P7PH324ZTDTYJNQAOGPYZAYLIBJQWPJBVBK4MVIMZQAR",
+  contractId: "CBENQGQPLC3CKU5HCRZPBIT6RSZVLUJKUCVPJFJGYJ3OXEW7BZCXULC2",
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: "Test SDF Network ; September 2015",
 });`}
