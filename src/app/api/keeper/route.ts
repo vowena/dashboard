@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
-  Account,
   Keypair,
   TransactionBuilder,
   Networks,
@@ -12,19 +11,23 @@ import {
 } from "@stellar/stellar-sdk";
 
 /**
- * Manual keeper trigger for the dashboard's "Run now" button. Same logic
- * as the scheduled cron at /api/cron, but scoped to one merchant's plans.
+ * Manual keeper trigger ('Run now' button). Same logic as the scheduled
+ * /api/cron, scoped to a single merchant.
  *
- * Submission is parallel and fire-and-forget — we report how many txs we
- * successfully submitted, not how many actually moved tokens (the contract
- * decides that based on whether each sub is due). Periods billed will be
- * reflected on next read.
+ * Submissions are SERIAL (Stellar requires monotonic sequence per source);
+ * discovery is parallel. We don't poll for inclusion.
  */
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const CONTRACT_ID = "CCNDNEGYFYKTVBM7T2BEF5YVSKKICE44JOVHT7SAN5YTKHHBFIIEL72T";
 const RPC_URL = "https://soroban-testnet.stellar.org";
+
+interface ChargeResult {
+  subId: number;
+  hash?: string;
+  error?: string;
+}
 
 export async function POST(request: NextRequest) {
   let body: { merchantAddress?: string };
@@ -46,8 +49,7 @@ export async function POST(request: NextRequest) {
   if (!secret) {
     return NextResponse.json(
       {
-        error:
-          "Keeper not configured. Set VOWENA_ISSUER_SECRET in the dashboard env.",
+        error: "Keeper not configured. Set VOWENA_ISSUER_SECRET in env.",
       },
       { status: 503 },
     );
@@ -58,7 +60,6 @@ export async function POST(request: NextRequest) {
   const contract = new Contract(CONTRACT_ID);
 
   try {
-    // Get just this merchant's plans (small list).
     const merchantPlanIds = await readVecU64(
       server,
       keeper.publicKey(),
@@ -66,12 +67,16 @@ export async function POST(request: NextRequest) {
       "get_merchant_plans",
       [nativeToScVal(merchantAddress, { type: "address" })],
     );
-
     if (merchantPlanIds.length === 0) {
-      return NextResponse.json({ attempted: 0, submitted: 0, failed: 0 });
+      return NextResponse.json({
+        attempted: 0,
+        submitted: 0,
+        charged: 0,
+        failed: 0,
+        results: [],
+      });
     }
 
-    // Discover subscribers for each plan in parallel.
     const subscribersPerPlan = await Promise.all(
       merchantPlanIds.map((pid) =>
         readVecU64(server, keeper.publicKey(), contract, "get_plan_subscribers", [
@@ -82,55 +87,74 @@ export async function POST(request: NextRequest) {
     const subIds = Array.from(new Set(subscribersPerPlan.flat()));
 
     if (subIds.length === 0) {
-      return NextResponse.json({ attempted: 0, submitted: 0, failed: 0 });
+      return NextResponse.json({
+        attempted: 0,
+        submitted: 0,
+        charged: 0,
+        failed: 0,
+        results: [],
+      });
     }
 
-    // Submit all charges in parallel, no inclusion polling.
-    const seedAccount = await server.getAccount(keeper.publicKey());
-    let baseSequence = BigInt(seedAccount.sequenceNumber());
+    // Serial submission to keep sequence numbers monotonic
+    const results: ChargeResult[] = [];
+    for (const subId of subIds) {
+      results.push(await chargeOne(server, keeper, contract, subId));
+    }
 
-    const submissions = await Promise.allSettled(
-      subIds.map(async (subId) => {
-        const acct = new Account(
-          keeper.publicKey(),
-          (++baseSequence).toString(),
-        );
-        const tx = new TransactionBuilder(acct, {
-          fee: "100000",
-          networkPassphrase: Networks.TESTNET,
-        })
-          .addOperation(
-            contract.call("charge", nativeToScVal(subId, { type: "u64" })),
-          )
-          .setTimeout(30)
-          .build();
-
-        const sim = await server.simulateTransaction(tx);
-        if (SorobanRpc.Api.isSimulationError(sim)) {
-          throw new Error(`sim ${subId}`);
-        }
-        const prepared = SorobanRpc.assembleTransaction(tx, sim).build();
-        prepared.sign(keeper);
-        const sent = await server.sendTransaction(prepared);
-        if (sent.status === "ERROR") throw new Error(`send ${subId}`);
-        return sent.hash;
-      }),
-    );
-
-    const submitted = submissions.filter((r) => r.status === "fulfilled").length;
-    const failed = submissions.filter((r) => r.status === "rejected").length;
+    const submitted = results.filter((r) => !r.error).length;
+    const failed = results.length - submitted;
 
     return NextResponse.json({
       attempted: subIds.length,
       submitted,
       charged: submitted,
       failed,
+      results,
     });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Keeper run failed" },
       { status: 500 },
     );
+  }
+}
+
+async function chargeOne(
+  server: SorobanRpc.Server,
+  keeper: Keypair,
+  contract: Contract,
+  subId: number,
+): Promise<ChargeResult> {
+  try {
+    const account = await server.getAccount(keeper.publicKey());
+    const tx = new TransactionBuilder(account, {
+      fee: "100000",
+      networkPassphrase: Networks.TESTNET,
+    })
+      .addOperation(
+        contract.call("charge", nativeToScVal(subId, { type: "u64" })),
+      )
+      .setTimeout(30)
+      .build();
+
+    const sim = await server.simulateTransaction(tx);
+    if (SorobanRpc.Api.isSimulationError(sim)) {
+      return { subId, error: `sim: ${sim.error}` };
+    }
+
+    const prepared = SorobanRpc.assembleTransaction(tx, sim).build();
+    prepared.sign(keeper);
+    const sent = await server.sendTransaction(prepared);
+    if (sent.status === "ERROR") {
+      return { subId, error: "send error" };
+    }
+    return { subId, hash: sent.hash };
+  } catch (err) {
+    return {
+      subId,
+      error: err instanceof Error ? err.message : "unknown error",
+    };
   }
 }
 

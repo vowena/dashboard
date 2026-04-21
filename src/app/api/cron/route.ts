@@ -10,37 +10,35 @@ import {
 } from "@stellar/stellar-sdk";
 
 /**
- * Vercel cron entry point. Configured to fire every 5 minutes via
- * vercel.json. Walks plan subscribers and fires charge() on every
- * subscription. The contract decides what's actually due — calling
- * for a not-yet-due sub is a harmless no-op (returns false).
+ * Vercel cron entry point. Walks plan subscribers and fires charge() on
+ * every subscription. Contract decides what's actually due.
  *
- * Performance design:
- *   - Discovery is parallel: Promise.all over a bounded plan ID range
- *   - Charge submission is parallel and fire-and-forget: we send the tx
- *     and immediately move on. We do NOT poll for inclusion — that was
- *     burning ~12s per sub serially and overflowing the 300s function
- *     timeout. Whether a charge actually billed shows up on the next
- *     read of the subscription's periodsBilled.
- *   - charge() is idempotent within a period, so re-sending is safe.
+ * Critical perf design:
+ *   1. Discovery (get_plan_subscribers per plan) runs in PARALLEL — these
+ *      are read-only simulations, no sequence concerns.
+ *   2. Charge submissions run SERIALLY. Stellar requires sequence numbers
+ *      to be the *exact* next one (account.seq + 1); parallel submissions
+ *      from the same source account get rejected as tx_bad_seq except the
+ *      first to land. We re-fetch the account between each submit so the
+ *      sequence is always up-to-date.
+ *   3. We do NOT poll for inclusion — that was burning ~12s per sub. We
+ *      just send and move on. charge() is idempotent within a period.
  *
  * Auth: when CRON_SECRET is set, require Authorization: Bearer <secret>.
- * Vercel automatically sends this header for scheduled cron invocations.
- *
- * Required env: VOWENA_ISSUER_SECRET (charge() is permissionless on the
- * contract; reusing the issuer key avoids a new env var).
+ * Required env: VOWENA_ISSUER_SECRET (signs charge() — permissionless on contract).
  */
 
-// Allow this function up to 60s (default would kill it after 10s/15s).
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const CONTRACT_ID = "CCNDNEGYFYKTVBM7T2BEF5YVSKKICE44JOVHT7SAN5YTKHHBFIIEL72T";
 const RPC_URL = "https://soroban-testnet.stellar.org";
-
-// Upper bound for plan-ID scan. Way more than the demo / beta will hit;
-// a real deployment would replace this with a NextPlanId contract read
-// or a dedicated indexer.
 const MAX_PLAN_SCAN = 200;
+
+interface ChargeResult {
+  subId: number;
+  hash?: string;
+  error?: string;
+}
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -64,7 +62,7 @@ export async function GET(request: NextRequest) {
   const contract = new Contract(CONTRACT_ID);
 
   try {
-    // 1) Discover subscribers across all plans IN PARALLEL.
+    // 1) Parallel plan-subscriber discovery (reads only)
     const planIds = Array.from({ length: MAX_PLAN_SCAN }, (_, i) => i + 1);
     const subscribersPerPlan = await Promise.all(
       planIds.map((pid) =>
@@ -81,62 +79,71 @@ export async function GET(request: NextRequest) {
         attempted: 0,
         submitted: 0,
         failed: 0,
+        results: [],
       });
     }
 
-    // 2) Fire all charges IN PARALLEL, no polling. The submit goes through;
-    //    the contract decides whether to actually move tokens. We track
-    //    submission success here, not inclusion success.
-    const sequenceAccount = await server.getAccount(keeper.publicKey());
-    let baseSequence = BigInt(sequenceAccount.sequenceNumber());
+    // 2) Serial charge submissions (sequence-correct)
+    const results: ChargeResult[] = [];
+    for (const subId of subIds) {
+      results.push(await chargeOne(server, keeper, contract, subId));
+    }
 
-    const submissions = await Promise.allSettled(
-      subIds.map(async (subId) => {
-        // Build, simulate, prepare, sign, send.
-        // We don't need a fresh sequence per call when running in parallel
-        // because we use independent simulations + sequential bumping.
-        const acct = new (await import("@stellar/stellar-sdk")).Account(
-          keeper.publicKey(),
-          (++baseSequence).toString(),
-        );
-        const tx = new TransactionBuilder(acct, {
-          fee: "100000",
-          networkPassphrase: Networks.TESTNET,
-        })
-          .addOperation(
-            contract.call("charge", nativeToScVal(subId, { type: "u64" })),
-          )
-          .setTimeout(30)
-          .build();
-
-        const sim = await server.simulateTransaction(tx);
-        if (SorobanRpc.Api.isSimulationError(sim)) {
-          throw new Error(`sim ${subId}: ${sim.error}`);
-        }
-        const prepared = SorobanRpc.assembleTransaction(tx, sim).build();
-        prepared.sign(keeper);
-        const sent = await server.sendTransaction(prepared);
-        if (sent.status === "ERROR") {
-          throw new Error(`send ${subId}: error`);
-        }
-        return sent.hash;
-      }),
-    );
-
-    const submitted = submissions.filter((r) => r.status === "fulfilled").length;
-    const failed = submissions.filter((r) => r.status === "rejected").length;
+    const submitted = results.filter((r) => !r.error).length;
+    const failed = results.length - submitted;
 
     return NextResponse.json({
       ranAt: new Date().toISOString(),
       attempted: subIds.length,
       submitted,
       failed,
+      results,
     });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Cron failed" },
       { status: 500 },
     );
+  }
+}
+
+async function chargeOne(
+  server: SorobanRpc.Server,
+  keeper: Keypair,
+  contract: Contract,
+  subId: number,
+): Promise<ChargeResult> {
+  try {
+    // Fetch fresh account so we always have the next-expected sequence.
+    const account = await server.getAccount(keeper.publicKey());
+    const tx = new TransactionBuilder(account, {
+      fee: "100000",
+      networkPassphrase: Networks.TESTNET,
+    })
+      .addOperation(
+        contract.call("charge", nativeToScVal(subId, { type: "u64" })),
+      )
+      .setTimeout(30)
+      .build();
+
+    const sim = await server.simulateTransaction(tx);
+    if (SorobanRpc.Api.isSimulationError(sim)) {
+      return { subId, error: `sim: ${sim.error}` };
+    }
+
+    const prepared = SorobanRpc.assembleTransaction(tx, sim).build();
+    prepared.sign(keeper);
+    const sent = await server.sendTransaction(prepared);
+    if (sent.status === "ERROR") {
+      const code = (sent as { errorResult?: { result?: () => { switch?: () => { name?: string } } } })?.errorResult?.result?.()?.switch?.()?.name;
+      return { subId, error: `send: ${code ?? "error"}` };
+    }
+    return { subId, hash: sent.hash };
+  } catch (err) {
+    return {
+      subId,
+      error: err instanceof Error ? err.message : "unknown error",
+    };
   }
 }
 
