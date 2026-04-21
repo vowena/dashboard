@@ -324,6 +324,42 @@ export async function buildDeleteProjectTx(
 }
 
 /**
+ * Check whether a Stellar account exists on the network (i.e. has been
+ * funded with the minimum reserve). Required before any Soroban tx can
+ * use this account as a source.
+ */
+export async function isAccountFunded(address: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${HORIZON_URL}/accounts/${address}`, {
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Activate a brand-new wallet on testnet via friendbot. Funds the account
+ * with 10000 XLM. Only works on testnet — mainnet has no friendbot.
+ */
+export async function fundViaFriendbot(address: string): Promise<void> {
+  const res = await fetch(
+    `https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`,
+  );
+  if (!res.ok) {
+    let detail = "Friendbot funding failed";
+    try {
+      const body = await res.json();
+      detail = body?.detail || body?.title || detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+}
+
+/**
  * Submit a signed tx to Horizon and wait for inclusion.
  */
 export async function submitToHorizon(

@@ -16,6 +16,8 @@ import {
   readProjects,
   buildTrustlineTx,
   submitToHorizon,
+  isAccountFunded,
+  fundViaFriendbot,
   TUSDC_CODE,
   TUSDC_ISSUER,
 } from "@/lib/account-data";
@@ -55,37 +57,48 @@ export default function CheckoutPage() {
   const [needsFunding, setNeedsFunding] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
   const [fundingMessage, setFundingMessage] = useState<string | null>(null);
-  const [existingSubId, setExistingSubId] = useState<number | null>(null);
+  const [needsActivation, setNeedsActivation] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
   const [success, setSuccess] = useState<{ subId?: number } | null>(null);
 
-  // After wallet connects, check if subscriber already has an active sub to
-  // this plan. Prevents duplicate subscriptions and shows a friendly link to
-  // their existing one instead.
+  // After wallet connects, check if their account exists on Stellar at all.
+  // A brand-new wallet that hasn't been funded with the minimum reserve
+  // can't sign any tx — we need to send them to friendbot first.
   useEffect(() => {
-    if (!isConnected || !address || isNaN(planId) || planId <= 0) return;
+    if (!isConnected || !address) {
+      setNeedsActivation(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      try {
-        const subIds = await getSubscriberSubscriptions(address);
-        for (const id of subIds) {
-          const sub = await getSubscription(id, address);
-          if (
-            sub.planId === planId &&
-            (sub.status === "Active" || sub.status === "Paused")
-          ) {
-            if (!cancelled) setExistingSubId(id);
-            return;
-          }
-        }
-        if (!cancelled) setExistingSubId(null);
-      } catch {
-        // Best-effort — if this fails, the chain will still reject duplicates
-      }
+      const funded = await isAccountFunded(address);
+      if (!cancelled) setNeedsActivation(!funded);
     })();
     return () => {
       cancelled = true;
     };
-  }, [isConnected, address, planId, success]);
+  }, [isConnected, address]);
+
+  const handleActivate = async () => {
+    if (!address) return;
+    setIsActivating(true);
+    setSubError(null);
+    try {
+      await fundViaFriendbot(address);
+      // Wait a moment for Horizon to index, then re-check
+      await new Promise((r) => setTimeout(r, 1500));
+      const funded = await isAccountFunded(address);
+      setNeedsActivation(!funded);
+    } catch (err) {
+      setSubError(
+        err instanceof Error
+          ? `Couldn't activate wallet: ${err.message}`
+          : "Couldn't activate wallet",
+      );
+    } finally {
+      setIsActivating(false);
+    }
+  };
 
   const handleFund = async () => {
     if (!address) return;
@@ -309,7 +322,9 @@ export default function CheckoutPage() {
             isFunding={isFunding}
             fundingMessage={fundingMessage}
             onFund={handleFund}
-            existingSubId={existingSubId}
+            needsActivation={needsActivation}
+            isActivating={isActivating}
+            onActivate={handleActivate}
             onSubscribe={handleSubscribe}
             onCancel={cancelUrl ? handleCancel : undefined}
             address={address}
@@ -348,7 +363,9 @@ function CheckoutBody({
   isFunding,
   fundingMessage,
   onFund,
-  existingSubId,
+  needsActivation,
+  isActivating,
+  onActivate,
   onSubscribe,
   onCancel,
   address,
@@ -368,7 +385,9 @@ function CheckoutBody({
   isFunding: boolean;
   fundingMessage: string | null;
   onFund: () => Promise<void>;
-  existingSubId: number | null;
+  needsActivation: boolean;
+  isActivating: boolean;
+  onActivate: () => Promise<void>;
   onSubscribe: () => void;
   onCancel?: () => void;
   address: string | null;
@@ -460,6 +479,36 @@ function CheckoutBody({
 
       {/* Action area */}
       <div className="px-6 sm:px-8 py-6 space-y-3">
+        {needsActivation && (
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangleIcon
+                size={14}
+                className="shrink-0 mt-0.5 text-warning"
+              />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-warning">
+                  Activate your wallet
+                </p>
+                <p className="text-xs text-secondary leading-relaxed">
+                  Your wallet hasn&apos;t been used on Stellar testnet yet. Tap
+                  below to activate it with free test XLM (one-time, takes a
+                  few seconds).
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={onActivate}
+              disabled={isActivating}
+            >
+              {isActivating ? "Activating…" : "Activate wallet (free)"}
+            </Button>
+          </div>
+        )}
+
         {needsTrustline && (
           <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
             <div className="flex items-start gap-2.5">
@@ -544,44 +593,31 @@ function CheckoutBody({
             Connect wallet to continue
             <ArrowRightIcon size={14} />
           </Button>
-        ) : existingSubId != null ? (
-          <div className="rounded-lg border border-success/30 bg-success-subtle p-4 space-y-3">
-            <div className="flex items-start gap-2.5">
-              <CheckIcon size={14} className="shrink-0 mt-0.5 text-success" />
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-success">
-                  You&apos;re already subscribed
-                </p>
-                <p className="text-xs text-secondary leading-relaxed">
-                  This wallet has an active subscription to this plan. You
-                  don&apos;t need to subscribe again.
-                </p>
-              </div>
-            </div>
-            <Link href="/subscriptions">
-              <Button size="sm" variant="outline" className="w-full gap-1.5">
-                View my subscriptions
-                <ArrowRightIcon size={12} />
-              </Button>
-            </Link>
-          </div>
         ) : (
           <Button
             size="lg"
             className="w-full h-11 gap-2"
             onClick={onSubscribe}
-            disabled={isSubscribing || needsTrustline || needsFunding}
+            disabled={
+              isSubscribing ||
+              needsActivation ||
+              needsTrustline ||
+              needsFunding
+            }
           >
             {isSubscribing
               ? "Confirming…"
-              : needsTrustline
-                ? "Establish trustline first"
-                : needsFunding
-                  ? "Fund wallet first"
-                  : "Subscribe now"}
-            {!isSubscribing && !needsTrustline && !needsFunding && (
-              <ArrowRightIcon size={14} />
-            )}
+              : needsActivation
+                ? "Activate wallet first"
+                : needsTrustline
+                  ? "Establish trustline first"
+                  : needsFunding
+                    ? "Fund wallet first"
+                    : "Subscribe now"}
+            {!isSubscribing &&
+              !needsActivation &&
+              !needsTrustline &&
+              !needsFunding && <ArrowRightIcon size={14} />}
           </Button>
         )}
 

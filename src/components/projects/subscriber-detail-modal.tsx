@@ -255,8 +255,12 @@ function Stat({
 function EventRow({ event }: { event: SubscriptionEvent }) {
   const { icon, label, color } = formatEvent(event);
   const time = new Date(event.timestamp * 1000);
+  const explorerHref = event.txHash
+    ? `https://stellar.expert/explorer/testnet/tx/${event.txHash}`
+    : `https://stellar.expert/explorer/testnet/ledger/${event.ledger}`;
+
   return (
-    <li className="flex items-start gap-3 py-2">
+    <li className="group flex items-start gap-3 py-2">
       <div className={`mt-1 shrink-0 ${color}`}>{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between gap-3">
@@ -270,11 +274,24 @@ function EventRow({ event }: { event: SubscriptionEvent }) {
             })}
           </p>
         </div>
-        {event.amount != null && event.amount > 0 && (
-          <p className="text-xs text-muted mt-0.5 font-mono">
-            {(event.amount / 1e7).toFixed(2)} USDC
-          </p>
-        )}
+        <div className="flex items-baseline justify-between gap-3 mt-0.5">
+          {event.amount != null && event.amount > 0 ? (
+            <p className="text-xs text-muted font-mono">
+              {(event.amount / 1e7).toFixed(2)} USDC
+            </p>
+          ) : (
+            <span />
+          )}
+          <a
+            href={explorerHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-medium text-muted hover:text-accent inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          >
+            View on Explorer
+            <ExternalLinkIcon size={9} />
+          </a>
+        </div>
       </div>
     </li>
   );

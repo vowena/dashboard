@@ -5,6 +5,7 @@ import { Subscription } from "@/hooks/useSubscriptions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { encodePlanId } from "@/lib/plan-id-codec";
+import { useSubscriptionEvents } from "@/hooks/useSubscriptionEvents";
 import {
   CloseIcon,
   CopyIcon,
@@ -205,17 +206,7 @@ export function SubscriptionModal({
             )}
 
             {activeTab === "history" && (
-              <div className="text-center py-12">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-surface flex items-center justify-center">
-                  <CalendarIcon size={20} className="text-muted" />
-                </div>
-                <p className="text-foreground font-medium mb-1">
-                  Event history
-                </p>
-                <p className="text-secondary text-sm max-w-xs mx-auto">
-                  Real-time event tracking from on-chain data is coming soon.
-                </p>
-              </div>
+              <SubHistoryView subscription={subscription} />
             )}
 
             {activeTab === "details" && (
@@ -345,4 +336,194 @@ function formatDuration(seconds: number): string {
   if (seconds < 86400)
     return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
   return `${Math.floor(seconds / 86400)}d`;
+}
+
+function SubHistoryView({ subscription }: { subscription: Subscription }) {
+  const { data: events, isLoading } = useSubscriptionEvents(subscription.id);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-start gap-3 animate-pulse">
+            <div className="w-2 h-2 rounded-full bg-surface mt-2 shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-32 bg-surface rounded" />
+              <div className="h-3 w-48 bg-surface rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!events || events.length === 0) {
+    // Synthesize from subscription state since RPC retention may have rolled
+    const synth: Array<{
+      label: string;
+      ts: number;
+      amount?: number;
+      tone: "success" | "info" | "error" | "muted";
+    }> = [
+      {
+        label: "Subscribed",
+        ts: subscription.createdAt,
+        amount:
+          subscription.periodsBilled > 0
+            ? Number(subscription.plan?.amount || 0)
+            : undefined,
+        tone: "success",
+      },
+    ];
+    if (subscription.periodsBilled > 1) {
+      synth.push({
+        label: `${subscription.periodsBilled - 1} additional charge${subscription.periodsBilled > 2 ? "s" : ""}`,
+        ts: subscription.createdAt,
+        amount:
+          (subscription.periodsBilled - 1) *
+          Number(subscription.plan?.amount || 0),
+        tone: "info",
+      });
+    }
+    if (subscription.cancelledAt > 0) {
+      synth.push({
+        label: "Cancelled",
+        ts: subscription.cancelledAt,
+        tone: "error",
+      });
+    }
+    return (
+      <div>
+        <ul className="space-y-1">
+          {synth.map((s, i) => (
+            <li key={i} className="flex items-start gap-3 py-2">
+              <CircleIcon tone={s.tone} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {s.label}
+                  </p>
+                  <p className="text-xs text-muted shrink-0">
+                    {new Date(s.ts * 1000).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                {s.amount != null && s.amount > 0 && (
+                  <p className="text-xs text-muted mt-0.5 font-mono">
+                    {(s.amount / 1e7).toFixed(2)} USDC
+                  </p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="text-[10px] text-muted mt-4 italic">
+          Live event log updates as new events occur. Older events may not be
+          retained by the RPC.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="space-y-1">
+      {events.map((ev, i) => {
+        const time = new Date(ev.timestamp * 1000);
+        const explorerHref = ev.txHash
+          ? `https://stellar.expert/explorer/testnet/tx/${ev.txHash}`
+          : `https://stellar.expert/explorer/testnet/ledger/${ev.ledger}`;
+        const label = humanizeEventType(ev.type);
+        return (
+          <li
+            key={`${ev.ledger}-${i}`}
+            className="group flex items-start gap-3 py-2"
+          >
+            <CircleIcon tone={eventTone(ev.type)} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-medium text-foreground">{label}</p>
+                <p className="text-xs text-muted shrink-0">
+                  {time.toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <div className="flex items-baseline justify-between gap-3 mt-0.5">
+                {ev.amount != null && ev.amount > 0 ? (
+                  <p className="text-xs text-muted font-mono">
+                    {(ev.amount / 1e7).toFixed(2)} USDC
+                  </p>
+                ) : (
+                  <span />
+                )}
+                <a
+                  href={explorerHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-medium text-muted hover:text-accent inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                >
+                  View on Explorer
+                  <ExternalLinkIcon size={9} />
+                </a>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function CircleIcon({
+  tone,
+}: {
+  tone: "success" | "info" | "error" | "muted";
+}) {
+  const cls =
+    tone === "success"
+      ? "bg-success"
+      : tone === "info"
+        ? "bg-accent"
+        : tone === "error"
+          ? "bg-error"
+          : "bg-muted";
+  return (
+    <span className={`w-2 h-2 rounded-full mt-2 shrink-0 ${cls}`} />
+  );
+}
+
+function humanizeEventType(t: string): string {
+  const lower = t.toLowerCase();
+  if (lower.includes("charge_success") || lower === "charge")
+    return "Charge succeeded";
+  if (lower.includes("charge_failed")) return "Charge failed";
+  if (lower.includes("paused")) return "Paused";
+  if (lower.includes("cancelled")) return "Cancelled";
+  if (lower.includes("reactivated")) return "Reactivated";
+  if (lower.includes("created") || lower.includes("subscribed"))
+    return "Subscribed";
+  if (lower.includes("expired")) return "Expired";
+  if (lower.includes("refund")) return "Refund issued";
+  return t || "Event";
+}
+
+function eventTone(t: string): "success" | "info" | "error" | "muted" {
+  const lower = t.toLowerCase();
+  if (lower.includes("failed") || lower.includes("cancelled")) return "error";
+  if (lower.includes("paused") || lower.includes("expired")) return "muted";
+  if (
+    lower.includes("success") ||
+    lower.includes("subscribed") ||
+    lower.includes("created") ||
+    lower.includes("reactivated")
+  )
+    return "success";
+  return "info";
 }

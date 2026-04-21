@@ -3,23 +3,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { getEvents, type VowenaEvent } from "@vowena/sdk";
 import { CONTRACT } from "@/lib/chain";
+import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 
 export interface SubscriptionEvent {
-  /** Human-readable event type like 'charge_success', 'subscribed' */
   type: string;
   timestamp: number;
   ledger: number;
   amount?: number;
+  /** Stellar transaction hash for stellar.expert linkout */
+  txHash?: string;
   raw: VowenaEvent;
 }
 
+const server = new SorobanRpc.Server(CONTRACT.RPC_URL);
+
 /**
- * Fetch the event history for a single subscription by walking recent Soroban
- * events and filtering by sub_id.
+ * Fetch the event history for a single subscription by walking recent
+ * Soroban events and filtering by sub_id.
  *
- * Note: Soroban RPC limits how far back you can query. For production use,
- * a dedicated indexer would be more scalable, but this works for subs
- * created within the last few hundred thousand ledgers.
+ * Soroban RPC retains events for ~24h on testnet; we query the most recent
+ * window and filter client-side. For longer history, a dedicated indexer
+ * would be needed.
  */
 export function useSubscriptionEvents(subId: number | null) {
   return useQuery({
@@ -27,53 +31,39 @@ export function useSubscriptionEvents(subId: number | null) {
     queryFn: async (): Promise<SubscriptionEvent[]> => {
       if (subId == null) return [];
 
-      // Query the last ~50,000 ledgers (roughly a few days on testnet)
-      // Stellar testnet produces ~17,280 ledgers/day
-      const { events, latestLedger } = await getEvents(
+      // Get the actual current ledger from RPC instead of guessing
+      const latest = await server.getLatestLedger();
+      const start = Math.max(1, latest.sequence - 17_280); // ~24h on testnet
+
+      const { events } = await getEvents(
         CONTRACT.RPC_URL,
         CONTRACT.ID,
-        Math.max(1, latestLedgerFallback() - 50_000),
+        start,
         1000,
       );
 
-      void latestLedger;
-
-      const forSub: SubscriptionEvent[] = [];
-
+      const matched: SubscriptionEvent[] = [];
       for (const ev of events) {
         if (!eventMentionsSubId(ev, subId)) continue;
-
-        forSub.push({
+        matched.push({
           type: inferEventType(ev),
           timestamp: ev.timestamp,
           ledger: ev.ledger,
           amount: extractAmount(ev),
+          txHash: extractTxHash(ev),
           raw: ev,
         });
       }
 
-      // Most recent first
-      return forSub.sort((a, b) => b.timestamp - a.timestamp);
+      return matched.sort((a, b) => b.timestamp - a.timestamp);
     },
     enabled: subId != null,
-    staleTime: 15_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000, // poll every 15s so the timeline stays live
   });
 }
 
-/**
- * Conservative ledger fallback. Soroban RPC startLedger can be >= 1; we just
- * want a recent-ish starting point. If we had a cached latestLedger we'd use
- * it, but for the initial query we pass a safe small positive so we query the
- * full recent history.
- */
-function latestLedgerFallback(): number {
-  // 1M ledgers back from some distant future point — safe for testnet today.
-  return 3_000_000;
-}
-
 function eventMentionsSubId(ev: VowenaEvent, subId: number): boolean {
-  // Topics typically include: [event_name, sub_id, subscriber_address]
-  // The sub_id may be encoded as u64 / i128 / string depending on SDK path.
   const topics = ev.topics ?? [];
   for (const t of topics) {
     if (t == null) continue;
@@ -82,7 +72,6 @@ function eventMentionsSubId(ev: VowenaEvent, subId: number): boolean {
     if (typeof t === "string" && /^\d+$/.test(t) && Number(t) === subId) {
       return true;
     }
-    // Stellar SDK ScVal — try to read .u64()
     const maybe = t as { u64?: () => bigint };
     try {
       if (typeof maybe?.u64 === "function" && Number(maybe.u64()) === subId) {
@@ -92,10 +81,14 @@ function eventMentionsSubId(ev: VowenaEvent, subId: number): boolean {
       // not a u64 ScVal
     }
   }
-  // Fallback: scan data payload as JSON-ish
+  // Fallback: check the data payload for the sub_id reference
   try {
     const asString = JSON.stringify(ev.data);
-    if (asString.includes(`"${subId}"`) || asString.includes(`:${subId}`)) {
+    if (
+      asString.includes(`"${subId}"`) ||
+      asString.includes(`:${subId},`) ||
+      asString.includes(`:${subId}}`)
+    ) {
       return true;
     }
   } catch {
@@ -105,11 +98,10 @@ function eventMentionsSubId(ev: VowenaEvent, subId: number): boolean {
 }
 
 function inferEventType(ev: VowenaEvent): string {
-  // The first topic is usually the event name (symbol)
   const firstTopic = ev.topics?.[0];
   if (typeof firstTopic === "string") return firstTopic;
   const maybe = firstTopic as { toString?: () => string };
-  if (maybe?.toString) return maybe.toString();
+  if (maybe?.toString) return String(maybe.toString());
   return ev.type || "event";
 }
 
@@ -120,5 +112,17 @@ function extractAmount(ev: VowenaEvent): number | undefined {
     if (typeof amt === "number") return amt;
     if (typeof amt === "bigint") return Number(amt);
   }
+  // Some events emit amount as a numeric value at the data root or in arrays
+  if (typeof data === "number") return data;
+  if (typeof data === "bigint") return Number(data);
+  return undefined;
+}
+
+function extractTxHash(ev: VowenaEvent): string | undefined {
+  // VowenaEvent doesn't standardize txHash; some RPC responses include it
+  // as `txHash` or under `id` (which is `<ledger>-<txIndex>-<eventIndex>`).
+  const e = ev as unknown as Record<string, unknown>;
+  if (typeof e.txHash === "string") return e.txHash;
+  if (typeof e.id === "string") return undefined; // can't derive hash from id alone
   return undefined;
 }

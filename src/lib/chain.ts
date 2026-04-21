@@ -19,6 +19,15 @@ export const client = new VowenaClient({
 export { SECONDS_PER_DAY, fromStroops };
 export const CONTRACT = { ID: CONTRACT_ID, RPC_URL, PASSPHRASE };
 
+/**
+ * A known-funded testnet account used as the caller/source for read-only
+ * Soroban simulations. The caller arg only matters because Soroban needs
+ * *some* funded account as the simulation source — using a stable known
+ * one means fresh/unfunded wallets can still browse plans and read state.
+ */
+export const READ_CALLER =
+  "GAGRLI6F336OEJF627UNHBOPXI6VDQ75DRMSWSX2FQ25F3RFVWJOIIQU";
+
 export interface ChainPlan {
   id: number;
   merchant: string;
@@ -81,7 +90,9 @@ export async function getSubscriberSubscriptions(
   address: string,
 ): Promise<number[]> {
   try {
-    const subIds = await client.getSubscriberSubscriptions(address, address);
+    // Use READ_CALLER as the simulation source so even unfunded fresh
+    // wallets can query their (empty) subscription list without errors.
+    const subIds = await client.getSubscriberSubscriptions(address, READ_CALLER);
     return subIds.map((id) => Number(id));
   } catch (error) {
     console.error("getSubscriberSubscriptions failed:", error);
@@ -91,17 +102,17 @@ export async function getSubscriberSubscriptions(
 
 export async function getSubscription(
   subId: number,
-  subscriberAddress: string,
+  _subscriberAddress: string,
 ): Promise<ChainSubscription> {
-  const sub = await client.getSubscription(subId, subscriberAddress);
+  const sub = await client.getSubscription(subId, READ_CALLER);
   return normalizeSub(sub);
 }
 
 export async function getPlan(
   planId: number,
-  merchantAddress: string,
+  _merchantAddress: string,
 ): Promise<ChainPlan> {
-  const plan = await client.getPlan(planId, merchantAddress);
+  const plan = await client.getPlan(planId, READ_CALLER);
   return normalizePlan(plan);
 }
 
@@ -109,10 +120,7 @@ export async function getMerchantPlans(
   merchantAddress: string,
 ): Promise<number[]> {
   try {
-    const planIds = await client.getMerchantPlans(
-      merchantAddress,
-      merchantAddress,
-    );
+    const planIds = await client.getMerchantPlans(merchantAddress, READ_CALLER);
     return planIds.map((id) => Number(id));
   } catch (error) {
     console.error("getMerchantPlans failed:", error);
@@ -122,10 +130,10 @@ export async function getMerchantPlans(
 
 export async function getPlanSubscribers(
   planId: number,
-  callerAddress: string,
+  _callerAddress: string,
 ): Promise<number[]> {
   try {
-    const subIds = await client.getPlanSubscribers(planId, callerAddress);
+    const subIds = await client.getPlanSubscribers(planId, READ_CALLER);
     return subIds.map((id) => Number(id));
   } catch (error) {
     console.error("getPlanSubscribers failed:", error);
