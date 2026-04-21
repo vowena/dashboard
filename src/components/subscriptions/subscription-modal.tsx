@@ -384,8 +384,9 @@ function SubHistoryView({ subscription }: { subscription: Subscription }) {
           ))}
         </ul>
         <p className="text-[10px] text-muted mt-4 italic">
-          Charges shown from on-chain state. Each row links to the
-          subscriber&apos;s Stellar transaction history on Explorer.
+          Live event log was past its retention window. Rows are reconstructed
+          from on-chain state and link to the merchant account where the
+          underlying charge transactions are listed.
         </p>
       </div>
     );
@@ -455,13 +456,18 @@ interface SynthEntry {
  * the underlying transaction.
  */
 function synthesizeEntries(subscription: Subscription): SynthEntry[] {
-  const explorerAccount = `https://stellar.expert/explorer/testnet/account/${subscription.subscriber}`;
+  // Link fallback to the merchant's account on Explorer — that account
+  // receives every charge, so its activity feed is the most direct view of
+  // the actual charge transactions when the specific tx hashes aren't in
+  // scope anymore.
+  const merchant = subscription.plan?.merchant;
+  const href = merchant
+    ? `https://stellar.expert/explorer/testnet/account/${merchant}`
+    : undefined;
   const amount = Number(subscription.plan?.amount || 0);
   const period = Number(subscription.plan?.period || 0);
   const entries: SynthEntry[] = [];
 
-  // Signup row — if trial was 0, the first charge was atomic with subscribe,
-  // so we call it "Subscribed & charged"; otherwise just "Subscribed".
   const trialPeriods = subscription.plan?.trialPeriods ?? 0;
   const signupBilled =
     subscription.periodsBilled > 0 && trialPeriods === 0;
@@ -469,25 +475,21 @@ function synthesizeEntries(subscription: Subscription): SynthEntry[] {
     label: signupBilled ? "Subscribed & charged" : "Subscribed",
     ts: subscription.createdAt,
     amount: signupBilled ? amount : undefined,
-    href: explorerAccount,
+    href,
     kind: "signup",
   });
 
-  // One row per subsequent billed period. The signup counts as periodsBilled=1
-  // when there was no trial, so extra charges = periodsBilled - (signupBilled ? 1 : 0).
   const extraCharges = Math.max(
     0,
     subscription.periodsBilled - (signupBilled ? 1 : 0),
   );
   for (let i = 0; i < extraCharges; i++) {
-    // Approximate charge timestamp: created + (i+1) * period when there was
-    // a trial, or created + (i+1) * period for post-signup charges.
     const ts = subscription.createdAt + (i + 1) * period;
     entries.push({
       label: "Charge succeeded",
       ts,
       amount,
-      href: explorerAccount,
+      href,
       kind: "charge",
     });
   }
@@ -496,12 +498,11 @@ function synthesizeEntries(subscription: Subscription): SynthEntry[] {
     entries.push({
       label: "Cancelled",
       ts: subscription.cancelledAt,
-      href: explorerAccount,
+      href,
       kind: "cancelled",
     });
   }
 
-  // Newest first
   return entries.sort((a, b) => b.ts - a.ts);
 }
 

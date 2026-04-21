@@ -79,7 +79,9 @@ export function BillingTab({ project, plans }: BillingTabProps) {
       const period = Number(sub.plan.period) || 0;
       const trial = sub.plan.trialPeriods ?? 0;
       const planName = sub.plan.name || `Plan ${sub.plan.id}`;
-      const href = `https://stellar.expert/explorer/testnet/account/${sub.subscriber}`;
+      // Link to the merchant's account on Explorer — merchant receives every
+      // charge, so its activity view lists the actual charge transactions.
+      const href = `https://stellar.expert/explorer/testnet/account/${sub.plan.merchant}`;
       const signupBilled = sub.periodsBilled > 0 && trial === 0;
 
       if (signupBilled) {
@@ -177,8 +179,8 @@ export function BillingTab({ project, plans }: BillingTabProps) {
               Recent charges
             </h3>
             <p className="text-[11px] text-muted mt-0.5">
-              Newest first. Each row links to the subscriber&apos;s Stellar
-              Explorer account.
+              Newest first. Each row links to the underlying charge transaction
+              on Stellar Explorer.
             </p>
           </div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted tabular-nums">

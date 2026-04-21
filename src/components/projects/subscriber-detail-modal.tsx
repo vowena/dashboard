@@ -298,10 +298,10 @@ function EventRow({ event }: { event: SubscriptionEvent }) {
 
 function EventTimelineFallback({ subscriber }: { subscriber: SubscriberRow }) {
   // RPC retention has rolled past the real events. Synthesize one row per
-  // billed period from on-chain subscription state so merchants can see each
-  // charge as its own entry, each linking to the subscriber's Stellar Explorer
-  // account where the underlying tx is visible.
-  const explorerAccount = `https://stellar.expert/explorer/testnet/account/${subscriber.subscriber}`;
+  // billed period from on-chain subscription state. Link every row to the
+  // merchant's account on Explorer — that account receives every charge so
+  // its activity feed is the direct view of the actual charge transactions.
+  const href = `https://stellar.expert/explorer/testnet/account/${subscriber.plan.merchant}`;
   const amount = Number(subscriber.plan.amount);
   const period = Number(subscriber.plan.period);
   const trialPeriods = subscriber.plan.trialPeriods ?? 0;
@@ -353,7 +353,7 @@ function EventTimelineFallback({ subscriber }: { subscriber: SubscriberRow }) {
           return (
             <li key={i}>
               <a
-                href={explorerAccount}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-center justify-between gap-3 py-3 px-3 -mx-3 rounded-lg hover:bg-surface transition-colors"
@@ -388,8 +388,9 @@ function EventTimelineFallback({ subscriber }: { subscriber: SubscriberRow }) {
         })}
       </ul>
       <p className="text-[10px] text-muted mt-4 italic">
-        Each row links to the subscriber&apos;s Stellar Explorer account where
-        the underlying tx is visible.
+        Live event log past its retention window. Rows are reconstructed from
+        on-chain state and link to the merchant account where the underlying
+        charge transactions are listed.
       </p>
     </div>
   );
