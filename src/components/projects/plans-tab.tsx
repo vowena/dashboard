@@ -60,8 +60,8 @@ export function PlansTab({
 
       {showForm && (
         <CreatePlanForm
-          merchantAddress={project.merchantAddress}
-          projectSlot={project.slot}
+          merchantAddress={project.merchant}
+          projectId={project.id}
           onClose={() => setShowForm(false)}
           onSuccess={() => {
             setShowForm(false);
@@ -209,12 +209,12 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function CreatePlanForm({
   merchantAddress,
-  projectSlot,
+  projectId,
   onClose,
   onSuccess,
 }: {
   merchantAddress: string;
-  projectSlot: number;
+  projectId: number;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -254,7 +254,7 @@ function CreatePlanForm({
         gracePeriod: parseInt(gracePeriod),
         priceCeilingUsdc: ceiling,
         name: planName,
-        projectSlot,
+        projectId,
       });
 
       await refetch();

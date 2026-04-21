@@ -7,7 +7,7 @@ import { RequireWallet } from "@/components/wallet/require-wallet";
 import {
   useProjects,
   getProjectPlansWithData,
-  type ProjectConfig,
+  type Project,
 } from "@/hooks/useProjects";
 import { usePro } from "@/hooks/usePro";
 import { findProjectByUrlParam, projectUrl } from "@/lib/project-slug";
@@ -42,7 +42,7 @@ function ProjectDashboardView() {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const project: ProjectConfig | undefined = findProjectByUrlParam(
+  const project: Project | undefined = findProjectByUrlParam(
     projects,
     urlParam,
   );
@@ -76,8 +76,8 @@ function ProjectDashboardView() {
       setIsLoadingPlans(true);
       try {
         const data = await getProjectPlansWithData(
-          project.merchantAddress,
-          project.slot,
+          project.merchant,
+          project.id,
         );
         if (!cancelled) setPlans(data);
       } catch (e) {

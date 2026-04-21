@@ -3,10 +3,11 @@ import {
   fromStroops,
   SECONDS_PER_DAY,
   type Plan as SdkPlan,
+  type Project as SdkProject,
   type Subscription as SdkSubscription,
 } from "@vowena/sdk";
 
-const CONTRACT_ID = "CDVNTA6K6YX6YWD7LAFGIVDXVIDGUB3P7EQ3EU6V3XLMQEZ5SAIGH66Z";
+const CONTRACT_ID = "CCNDNEGYFYKTVBM7T2BEF5YVSKKICE44JOVHT7SAN5YTKHHBFIIEL72T";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const PASSPHRASE = "Test SDF Network ; September 2015";
 
@@ -42,8 +43,16 @@ export interface ChainPlan {
   active: boolean;
   /** Display name set on chain by the merchant */
   name: string;
-  /** Which project slot this plan belongs to (0-based) */
-  projectSlot: number;
+  /** Chain-assigned ID of the parent project this plan belongs to */
+  projectId: number;
+}
+
+export interface ChainProject {
+  id: number;
+  merchant: string;
+  name: string;
+  description: string;
+  createdAt: number;
 }
 
 export interface ChainSubscription {
@@ -73,8 +82,35 @@ function normalizePlan(plan: SdkPlan): ChainPlan {
     createdAt: Number(plan.createdAt),
     active: Boolean(plan.active),
     name: plan.name ?? "",
-    projectSlot: Number(plan.projectSlot ?? 0),
+    projectId: Number(plan.projectId ?? 0),
   };
+}
+
+function normalizeProject(p: SdkProject): ChainProject {
+  return {
+    id: Number(p.id),
+    merchant: String(p.merchant),
+    name: p.name ?? "",
+    description: p.description ?? "",
+    createdAt: Number(p.createdAt),
+  };
+}
+
+export async function getProject(projectId: number): Promise<ChainProject> {
+  const p = await client.getProject(projectId, READ_CALLER);
+  return normalizeProject(p);
+}
+
+export async function getMerchantProjects(
+  merchantAddress: string,
+): Promise<number[]> {
+  try {
+    const ids = await client.getMerchantProjects(merchantAddress, READ_CALLER);
+    return ids.map((id) => Number(id));
+  } catch (error) {
+    console.error("getMerchantProjects failed:", error);
+    return [];
+  }
 }
 
 function normalizeSub(sub: SdkSubscription): ChainSubscription {

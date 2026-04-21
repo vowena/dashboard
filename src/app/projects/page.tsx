@@ -10,7 +10,8 @@ import { CreateProjectModal } from "@/components/projects/create-project-modal";
 import { TopNav } from "@/components/top-nav";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, ArrowRightIcon, CheckIcon } from "@/components/ui/icons";
-import { projectUrl, slugCollides } from "@/lib/project-slug";
+import { projectUrl } from "@/lib/project-slug";
+import { encodePlanId } from "@/lib/plan-id-codec";
 
 export default function ProjectsPage() {
   return (
@@ -103,12 +104,11 @@ function ProjectsView() {
                 )}
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <p className="font-mono text-muted truncate">
-                    {project.merchantAddress.slice(0, 6)}…
-                    {project.merchantAddress.slice(-6)}
+                    {project.merchant.slice(0, 6)}…
+                    {project.merchant.slice(-6)}
                   </p>
-                  <span className="text-muted shrink-0">
-                    {project.planIds.length} plan
-                    {project.planIds.length !== 1 ? "s" : ""}
+                  <span className="text-muted shrink-0 font-mono text-[10px]">
+                    #{encodePlanId(project.id)}
                   </span>
                 </div>
               </button>
@@ -120,13 +120,7 @@ function ProjectsView() {
       <CreateProjectModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        existingNames={projects.map((w) => w.name)}
         onCreateProject={async (name, description, onStatus) => {
-          if (slugCollides(projects, name)) {
-            throw new Error(
-              "A project with this name already exists. Choose another.",
-            );
-          }
           const ws = await createProject(name, description, onStatus);
           setShowCreateModal(false);
           router.push(projectUrl(ws));

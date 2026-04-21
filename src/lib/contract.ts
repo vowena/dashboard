@@ -26,7 +26,7 @@ export async function createPlan(params: {
   gracePeriod?: number;
   priceCeilingUsdc: number;
   name: string;
-  projectSlot: number;
+  projectId: number;
 }) {
   const built = await client.buildCreatePlan({
     merchant: params.merchant,
@@ -38,9 +38,22 @@ export async function createPlan(params: {
     gracePeriod: params.gracePeriod ?? 86400,
     priceCeiling: BigInt(Math.floor(params.priceCeilingUsdc * 1e7)),
     name: params.name,
-    projectSlot: params.projectSlot,
+    projectId: params.projectId,
   });
 
+  return signAndSubmit({ xdr: built, sourceAddress: params.merchant });
+}
+
+export async function createProject(params: {
+  merchant: string;
+  name: string;
+  description?: string;
+}) {
+  const built = await client.buildCreateProject({
+    merchant: params.merchant,
+    name: params.name,
+    description: params.description,
+  });
   return signAndSubmit({ xdr: built, sourceAddress: params.merchant });
 }
 

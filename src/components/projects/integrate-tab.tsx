@@ -6,7 +6,7 @@ import { encodePlanId, planCheckoutUrl } from "@/lib/plan-id-codec";
 import type { NamedPlan } from "@/hooks/useProjects";
 
 interface IntegrateTabProps {
-  project: { name: string; merchantAddress: string };
+  project: { name: string; merchant: string };
   plans: NamedPlan[];
 }
 

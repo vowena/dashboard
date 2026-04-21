@@ -2,41 +2,40 @@
 
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk";
-import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { useWallet } from "@/components/wallet/wallet-provider";
-import {
-  readProjects,
-  buildCreateProjectTx,
-  buildTagAndNamePlanTx,
-  buildDeleteProjectTx,
-  submitToHorizon,
-  type OnChainProject,
-} from "@/lib/account-data";
-import { getPlan, type ChainPlan } from "@/lib/chain";
+import { client, getMerchantProjects, getProject, READ_CALLER } from "@/lib/chain";
+import { createProject as createProjectTx } from "@/lib/contract";
+import { getPlan, getMerchantPlans, type ChainPlan } from "@/lib/chain";
 
-/** Plan as used in the dashboard — augmented with the on-chain display name */
-export type NamedPlan = ChainPlan & { name?: string };
+export interface Project {
+  /** Globally unique chain-assigned u64. The single source of identity. */
+  id: number;
+  merchant: string;
+  name: string;
+  description: string;
+  createdAt: number;
+}
 
-export type ProjectConfig = OnChainProject & {
-  /** Alias kept for back-compat; equals slugified name */
-  id: string;
-};
+export type NamedPlan = ChainPlan & { name: string };
 
 export type CreateStatus = "preparing" | "signing" | "submitting" | "done";
 
 export function useProjects() {
   const { address } = useWallet();
   const queryClient = useQueryClient();
-
   const queryKey = ["projects", address];
 
   const query = useQuery({
     queryKey,
-    queryFn: async (): Promise<ProjectConfig[]> => {
+    queryFn: async (): Promise<Project[]> => {
       if (!address) return [];
-      const raw = await readProjects(address);
-      return raw.map((w) => ({ ...w, id: String(w.slot) }));
+      const ids = await getMerchantProjects(address);
+      const projects = await Promise.all(
+        ids.map((id) => getProject(id).catch(() => null)),
+      );
+      return projects
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .sort((a, b) => a.createdAt - b.createdAt);
     },
     enabled: !!address,
     staleTime: 5_000,
@@ -44,117 +43,59 @@ export function useProjects() {
   });
 
   /**
-   * Create a project on-chain. Onstatus callback gets fired with stages so
-   * the UI can show granular progress. After submission, the new project is
-   * optimistically inserted into the cache so the UI reflects it immediately
-   * (a background refetch follows to confirm).
+   * Create a new Project on chain. The contract assigns the project_id;
+   * we identify the new one by diffing the merchant's project list before
+   * vs. after the submit.
    */
   const createProject = useCallback(
     async (
       name: string,
       description: string | undefined,
       onStatus?: (s: CreateStatus) => void,
-    ): Promise<ProjectConfig> => {
+    ): Promise<Project> => {
       if (!address) throw new Error("Wallet not connected");
 
       onStatus?.("preparing");
-      const cached = (query.data || []) as OnChainProject[];
-      const { xdr, slot } = await buildCreateProjectTx(
-        address,
-        name,
-        description,
-        cached,
-      );
+      const before = new Set(await getMerchantProjects(address));
 
       onStatus?.("signing");
-      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
-        networkPassphrase: Networks.TESTNET,
-        address,
+      await createProjectTx({
+        merchant: address,
+        name,
+        description,
       });
 
       onStatus?.("submitting");
-      await submitToHorizon(signedTxXdr);
+      // Discover the new project_id by diff
+      const after = await getMerchantProjects(address);
+      const fresh = after.filter((id) => !before.has(id));
+      const newId =
+        fresh.length > 0
+          ? Math.max(...fresh)
+          : after.length > 0
+            ? Math.max(...after)
+            : 0;
 
-      const newProject: ProjectConfig = {
-        slot,
-        id: String(slot),
+      const newProject: Project = {
+        id: newId,
+        merchant: address,
         name,
-        description,
-        planIds: [],
-        planNames: {},
-        merchantAddress: address,
+        description: description ?? "",
+        createdAt: Math.floor(Date.now() / 1000),
       };
 
-      // Optimistic update — UI sees the new project instantly
-      queryClient.setQueryData<ProjectConfig[]>(queryKey, (old = []) => {
-        const next = [...old, newProject].sort((a, b) => a.slot - b.slot);
-        return next;
-      });
+      // Optimistic update
+      queryClient.setQueryData<Project[]>(queryKey, (old = []) =>
+        [...old, newProject].sort((a, b) => a.createdAt - b.createdAt),
+      );
 
-      // Background refetch to reconcile with chain (delayed to give Horizon a moment)
+      // Reconcile shortly after
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey });
       }, 2000);
 
       onStatus?.("done");
       return newProject;
-    },
-    [address, queryClient, query.data, queryKey],
-  );
-
-  /**
-   * Tag a plan to a project AND store its display name on chain in a single
-   * Stellar tx (one wallet signature).
-   */
-  const tagAndNamePlan = useCallback(
-    async (planId: number, slot: number, planName: string): Promise<void> => {
-      if (!address) throw new Error("Wallet not connected");
-
-      const xdr = await buildTagAndNamePlanTx(address, planId, slot, planName);
-      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
-        networkPassphrase: Networks.TESTNET,
-        address,
-      });
-      await submitToHorizon(signedTxXdr);
-
-      // Optimistic: append planId to that project + record name
-      queryClient.setQueryData<ProjectConfig[]>(queryKey, (old = []) =>
-        old.map((w) =>
-          w.slot === slot
-            ? {
-                ...w,
-                planIds: [...w.planIds, planId],
-                planNames: { ...w.planNames, [planId]: planName },
-              }
-            : w,
-        ),
-      );
-
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey });
-      }, 2000);
-    },
-    [address, queryClient, queryKey],
-  );
-
-  const deleteProject = useCallback(
-    async (slot: number): Promise<void> => {
-      if (!address) throw new Error("Wallet not connected");
-
-      const xdr = await buildDeleteProjectTx(address, slot);
-      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
-        networkPassphrase: Networks.TESTNET,
-        address,
-      });
-      await submitToHorizon(signedTxXdr);
-
-      queryClient.setQueryData<ProjectConfig[]>(queryKey, (old = []) =>
-        old.filter((w) => w.slot !== slot),
-      );
-
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey });
-      }, 2000);
     },
     [address, queryClient, queryKey],
   );
@@ -164,25 +105,20 @@ export function useProjects() {
     isLoading: query.isLoading,
     error: query.error,
     createProject,
-    tagAndNamePlan,
-    deleteProject,
     refetch: query.refetch,
   };
 }
 
 /**
- * Fetch all plans belonging to a specific project.
- *
- * Filters merchant's plans by plan.projectSlot — this is the on-chain
- * project_slot field set when the plan was created. No off-chain tagging
- * needed: every plan natively knows its project.
+ * Fetch all plans belonging to a specific project (filters merchant plans
+ * by plan.projectId, where both project_id and project membership are
+ * stored on chain by the contract).
  */
 export async function getProjectPlansWithData(
   merchantAddress: string,
-  projectSlot: number,
+  projectId: number,
 ): Promise<NamedPlan[]> {
   try {
-    const { getMerchantPlans } = await import("@/lib/chain");
     const allMerchantIds = await getMerchantPlans(merchantAddress);
     if (allMerchantIds.length === 0) return [];
 
@@ -194,10 +130,14 @@ export async function getProjectPlansWithData(
 
     return plans
       .filter((p): p is NonNullable<typeof p> => p !== null)
-      .filter((p) => p.projectSlot === projectSlot)
+      .filter((p) => p.projectId === projectId)
       .map((p) => ({ ...p }));
   } catch (error) {
     console.error("Failed to fetch project plans:", error);
     return [];
   }
 }
+
+// Re-export so existing imports keep working without changes
+void client;
+void READ_CALLER;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ProjectConfig } from "@/hooks/useProjects";
+import { type Project } from "@/hooks/useProjects";
 import {
   PlanIcon,
   SubscribersIcon,
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/icons";
 
 interface ProjectSidebarProps {
-  project: ProjectConfig;
+  project: Project;
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
@@ -68,8 +68,8 @@ export function ProjectSidebar({
               {project.name}
             </p>
             <p className="text-[10px] text-muted truncate font-mono">
-              {project.merchantAddress.slice(0, 6)}…
-              {project.merchantAddress.slice(-4)}
+              {project.merchant.slice(0, 6)}…
+              {project.merchant.slice(-4)}
             </p>
           </div>
         </div>
@@ -108,8 +108,8 @@ export function ProjectSidebar({
                   {project.name}
                 </p>
                 <p className="text-[10px] text-muted truncate font-mono mt-0.5">
-                  {project.merchantAddress.slice(0, 6)}…
-                  {project.merchantAddress.slice(-4)}
+                  {project.merchant.slice(0, 6)}…
+                  {project.merchant.slice(-4)}
                 </p>
               </div>
             )}
@@ -139,7 +139,7 @@ export function ProjectSidebar({
 
         <div className="border-t border-border p-3 space-y-1">
           <Link
-            href={`https://stellar.expert/explorer/testnet/account/${project.merchantAddress}`}
+            href={`https://stellar.expert/explorer/testnet/account/${project.merchant}`}
             target="_blank"
             rel="noopener noreferrer"
             title={isCollapsed ? "View on Explorer" : undefined}

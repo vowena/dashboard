@@ -75,15 +75,8 @@ export function CreateProjectModal({
   if (!isOpen) return null;
 
   const trimmed = name.trim();
-  const slug = slugify(trimmed);
-  const hasCollision =
-    !!trimmed &&
-    slugCollides(
-      existingNames.map((n) => ({ name: n })),
-      trimmed,
-    );
-  const canSubmit =
-    trimmed.length > 0 && !!defaultAddress && !!slug && !hasCollision;
+  void existingNames; // back-compat: name uniqueness is enforced by chain ID now
+  const canSubmit = trimmed.length > 0 && !!defaultAddress;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,19 +140,10 @@ export function CreateProjectModal({
                   disabled={isSubmitting}
                   maxLength={64}
                 />
-                {trimmed && slug && !hasCollision && (
-                  <p className="text-[10px] text-muted mt-1.5">
-                    URL:{" "}
-                    <span className="font-mono text-secondary">
-                      /projects/{slug}
-                    </span>
-                  </p>
-                )}
-                {hasCollision && (
-                  <p className="text-[10px] text-error mt-1.5">
-                    A project with this name already exists.
-                  </p>
-                )}
+                <p className="text-[10px] text-muted mt-1.5">
+                  Stored on chain. The URL will use a unique chain-assigned ID
+                  — no slug collisions, ever.
+                </p>
               </div>
 
               <div>

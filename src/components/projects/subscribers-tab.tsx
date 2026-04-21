@@ -11,7 +11,7 @@ import { cancelSubscription } from "@/lib/contract";
 import { formatChainError } from "@/lib/chain-errors";
 
 interface SubscribersTabProps {
-  project: { merchantAddress: string };
+  project: { merchant: string };
   plans: NamedPlan[];
 }
 
@@ -24,7 +24,7 @@ export function SubscribersTab({ project, plans }: SubscribersTabProps) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const { data: allSubscribers, isLoading, refetch } = useProjectSubscribers(
-    project.merchantAddress,
+    project.merchant,
     plans,
   );
 
@@ -57,7 +57,7 @@ export function SubscribersTab({ project, plans }: SubscribersTabProps) {
     if (!confirm("Cancel this subscription? The subscriber will stop being billed.")) return;
     try {
       await cancelSubscription({
-        caller: project.merchantAddress,
+        caller: project.merchant,
         subId,
       });
       setSelectedId(null);

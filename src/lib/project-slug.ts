@@ -1,64 +1,52 @@
-import type { OnChainProject } from "@/lib/account-data";
-
 /**
- * Convert a project name into a URL-safe slug.
- * "My SaaS" → "my-saas"
- * "Netflix" → "netflix"
- * "abc#123!" → "abc123"
+ * Project URLs use the same scrambled base-56 codec as plan IDs. Each
+ * project has a globally unique chain-assigned u64 ID — we just encode
+ * that for display in the URL bar.
+ *
+ *   /projects/{encodePlanId(project.id)}
+ *
+ * No client-side ID generation, no slug collisions, no slot logic.
  */
-export function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+
+import { encodePlanId, decodePlanId } from "@/lib/plan-id-codec";
+
+export interface UrlAddressableProject {
+  id: number;
+  name?: string;
+}
+
+export function projectUrl(project: UrlAddressableProject): string {
+  return `/projects/${encodePlanId(project.id)}`;
 }
 
 /**
- * Build the canonical project URL for a given project.
+ * Resolve a URL param back to a project ID. Falls back to numeric input
+ * for legacy /projects/0 style links so they don't 404.
  */
-export function projectUrl(project: { name: string }): string {
-  const slug = slugify(project.name);
-  if (!slug) return `/projects`;
-  return `/projects/${slug}`;
-}
-
-/**
- * Resolve a slug from the URL back to a project. Falls back to slot-based
- * lookup so old links like /projects/0 still work for back-compat.
- */
-export function findProjectByUrlParam<
-  W extends Pick<OnChainProject, "name" | "slot">,
->(projects: W[], param: string): W | undefined {
-  const decoded = decodeURIComponent(param).toLowerCase();
-
-  // First try slug match
-  const bySlug = projects.find((w) => slugify(w.name) === decoded);
-  if (bySlug) return bySlug;
-
-  // Fallback: numeric slot (legacy URLs)
-  if (/^\d+$/.test(decoded)) {
-    const slot = parseInt(decoded, 10);
-    return projects.find((w) => w.slot === slot);
+export function findProjectByUrlParam<P extends { id: number }>(
+  projects: P[],
+  param: string,
+): P | undefined {
+  const id = decodePlanId(param);
+  if (Number.isFinite(id) && id > 0) {
+    const exact = projects.find((p) => p.id === id);
+    if (exact) return exact;
   }
-
+  const numeric = parseInt(param, 10);
+  if (!isNaN(numeric)) {
+    return projects.find((p) => p.id === numeric);
+  }
   return undefined;
 }
 
 /**
- * Returns true if any existing project already uses this slug — used to
- * prevent duplicate-name collisions before signing the create tx.
+ * Names don't need to be unique anymore — the chain ID is the source of
+ * identity. Kept for back-compat with existing call sites; always false.
  */
-export function slugCollides(
-  projects: { name: string }[],
-  candidateName: string,
-): boolean {
-  const candidate = slugify(candidateName);
-  if (!candidate) return false;
-  return projects.some((w) => slugify(w.name) === candidate);
+export function slugCollides(): boolean {
+  return false;
+}
+
+export function slugify(name: string): string {
+  return name.trim();
 }
