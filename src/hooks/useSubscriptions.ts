@@ -3,8 +3,8 @@ import {
   getSubscriberSubscriptions,
   getSubscription,
   getPlan,
+  getProject,
 } from "@/lib/chain";
-import { readProjects } from "@/lib/account-data";
 
 export interface Plan {
   id: number;
@@ -18,6 +18,8 @@ export interface Plan {
   priceCeiling: number;
   createdAt: number;
   active: boolean;
+  name: string;
+  projectId: number;
 }
 
 export interface Subscription {
@@ -32,16 +34,16 @@ export interface Subscription {
   migrationTarget: number;
   cancelledAt: number;
   plan?: Plan;
-  /** Plan display name from the merchant's on-chain account data */
+  /** Plan display name from the on-chain Plan record */
   planName?: string;
-  /** Project (workspace) name from the merchant's on-chain account data */
+  /** Project name fetched from the on-chain Project (via plan.projectId) */
   projectName?: string;
 }
 
 /**
- * Fetch all subscriptions for the connected subscriber, augmented with
- * the merchant's project + plan names so the UI can show
- * "Vowena Tips → Pro Monthly" instead of "Plan #2 from GDFI…".
+ * Fetch all subscriptions for the connected subscriber, augmented with the
+ * plan + project names — both pulled directly from the contract. No more
+ * Stellar account data lookups; everything is chain-native.
  */
 export function useSubscriptions(subscriberAddress: string | null) {
   return useQuery({
@@ -60,61 +62,30 @@ export function useSubscriptions(subscriberAddress: string | null) {
         }),
       );
 
-      // Fetch each unique merchant's account data once
-      const uniqueMerchants = Array.from(
-        new Set(baseSubs.map((s) => s.plan?.merchant).filter(Boolean)),
-      ) as string[];
+      // For each unique plan.projectId, fetch the project from chain.
+      const uniqueProjectIds = Array.from(
+        new Set(baseSubs.map((s) => s.plan?.projectId).filter(Boolean)),
+      ) as number[];
 
-      const merchantMeta = new Map<
-        string,
-        { projectName: string; planNames: Record<number, string> }
-      >();
-
+      const projectNames = new Map<number, string>();
       await Promise.all(
-        uniqueMerchants.map(async (m) => {
+        uniqueProjectIds.map(async (pid) => {
           try {
-            const projects = await readProjects(m);
-            // For a given merchant, find which project owns each plan
-            const planNames: Record<number, string> = {};
-            let firstProjectName = "";
-            for (const proj of projects) {
-              if (!firstProjectName) firstProjectName = proj.name;
-              for (const [pid, pname] of Object.entries(proj.planNames)) {
-                planNames[Number(pid)] = pname;
-              }
-            }
-            // Use the project name that contains the most plans, or first
-            merchantMeta.set(m, {
-              projectName: firstProjectName,
-              planNames,
-            });
+            const proj = await getProject(pid);
+            projectNames.set(pid, proj.name);
           } catch {
-            // metadata unavailable; subscription still works
+            // project missing on chain — fine, fallback shows nothing
           }
         }),
       );
 
-      return baseSubs.map((sub) => {
-        const merchantAddr = sub.plan?.merchant;
-        const meta = merchantAddr ? merchantMeta.get(merchantAddr) : undefined;
-        const planName = meta?.planNames[sub.planId];
-
-        // For project name: try to find the specific project that owns this plan
-        let projectName = meta?.projectName;
-        if (merchantAddr) {
-          // Find the project that owns this specific plan
-          const allProjects = merchantMeta.get(merchantAddr);
-          if (allProjects?.planNames[sub.planId]) {
-            projectName = allProjects.projectName;
-          }
-        }
-
-        return {
-          ...sub,
-          planName,
-          projectName,
-        };
-      });
+      return baseSubs.map((sub) => ({
+        ...sub,
+        planName: sub.plan?.name,
+        projectName: sub.plan
+          ? projectNames.get(sub.plan.projectId)
+          : undefined,
+      }));
     },
     enabled: !!subscriberAddress,
     staleTime: 10000,
@@ -134,23 +105,20 @@ export function useSubscription(
       const sub = await getSubscription(subId, subscriberAddress);
       const plan = await getPlan(sub.planId, sub.subscriber);
 
-      // Best-effort metadata fetch
-      let planName: string | undefined;
       let projectName: string | undefined;
       try {
-        const projects = await readProjects(plan.merchant);
-        for (const proj of projects) {
-          if (proj.planNames[sub.planId]) {
-            planName = proj.planNames[sub.planId];
-            projectName = proj.name;
-            break;
-          }
-        }
+        const proj = await getProject(plan.projectId);
+        projectName = proj.name;
       } catch {
         // ignore
       }
 
-      return { ...sub, plan, planName, projectName } as Subscription;
+      return {
+        ...sub,
+        plan,
+        planName: plan.name,
+        projectName,
+      } as Subscription;
     },
     enabled: !!subId && !!subscriberAddress,
     staleTime: 5000,

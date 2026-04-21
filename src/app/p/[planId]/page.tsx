@@ -14,7 +14,6 @@ import { getLatestLedger, subscribeToPlan } from "@/lib/contract";
 import { decodePlanId, encodePlanId } from "@/lib/plan-id-codec";
 import { formatChainError } from "@/lib/chain-errors";
 import {
-  readProjects,
   buildTrustlineTx,
   submitToHorizon,
   isAccountFunded,
@@ -22,6 +21,7 @@ import {
   TUSDC_CODE,
   TUSDC_ISSUER,
 } from "@/lib/account-data";
+import { getProject } from "@/lib/chain";
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk";
 import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { VowenaLogo } from "@/components/vowena-logo";
@@ -153,23 +153,17 @@ export default function CheckoutPage() {
         const p = await getPlan(planId, caller);
         if (cancelled) return;
         setPlan(p);
-
-        // Look up the plan's display name and project name from the merchant's
-        // Stellar account data. Best-effort; if it fails the page still works
-        // with a generic title.
-        try {
-          const projects = await readProjects(p.merchant);
-          for (const proj of projects) {
-            if (proj.planNames[planId]) {
-              if (!cancelled) {
-                setPlanName(proj.planNames[planId]);
-                setProjectName(proj.name);
-              }
-              break;
-            }
+        // Plan name is on chain (p.name). Project name needs one more
+        // contract read using the plan's projectId — it's a real Soroban
+        // call, not Stellar account data.
+        if (p.name) setPlanName(p.name);
+        if (p.projectId) {
+          try {
+            const proj = await getProject(p.projectId);
+            if (!cancelled) setProjectName(proj.name);
+          } catch {
+            // project missing (very unusual) — fall back silently
           }
-        } catch {
-          // metadata unavailable — fine, fall back to generic plan label
         }
       } catch (err) {
         if (!cancelled) {
