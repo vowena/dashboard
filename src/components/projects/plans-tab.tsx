@@ -86,7 +86,7 @@ export function PlansTab({
           </Button>
         </div>
       ) : plans.length > 0 ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {plans.map((plan) => (
             <PlanCard key={plan.id} plan={plan} />
           ))}
@@ -121,65 +121,59 @@ function PlanCard({ plan }: { plan: any }) {
   );
 
   return (
-    <div className="rounded-xl border border-border bg-elevated p-5 sm:p-6 group">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: name + price + meta */}
+    <div className="rounded-xl border border-border bg-elevated p-6 group flex flex-col">
+      {/* Header: name + status badge */}
+      <div className="flex items-start justify-between mb-5 gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-base font-semibold text-foreground tracking-tight truncate">
-              {displayName}
-            </h3>
-            <Badge variant={plan.active ? "active" : "expired"}>
-              {plan.active ? "Active" : "Inactive"}
-            </Badge>
-          </div>
+          <h3 className="text-base font-semibold text-foreground tracking-tight truncate mb-1">
+            {displayName}
+          </h3>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl font-semibold text-foreground tabular-nums tracking-tight">
+            <span className="text-2xl font-semibold text-foreground tabular-nums tracking-tight">
               {amount}
             </span>
             <span className="text-xs text-muted font-mono">USDC</span>
-            <span className="text-xs text-muted">
-              / {formatPeriodFriendly(plan.period)}
-            </span>
-            {trialDays > 0 && (
-              <span className="text-xs text-muted ml-2">
-                · {trialDays}d free trial
-              </span>
-            )}
           </div>
+          <p className="text-xs text-muted mt-0.5">
+            every {formatPeriodFriendly(plan.period)}
+            {trialDays > 0 && ` · ${trialDays}-day free trial`}
+          </p>
         </div>
+        <Badge variant={plan.active ? "active" : "expired"}>
+          {plan.active ? "Active" : "Inactive"}
+        </Badge>
+      </div>
 
-        {/* Right: actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleCopyLink}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent-subtle text-accent hover:bg-accent hover:text-white transition-colors text-xs font-medium whitespace-nowrap"
-          >
-            {copiedLink ? (
-              <>
-                <CheckIcon size={12} />
-                Link copied
-              </>
-            ) : (
-              <>
-                <ExternalLinkIcon size={12} />
-                Copy checkout link
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleCopyId}
-            className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs text-muted hover:text-foreground hover:bg-surface transition-colors font-mono whitespace-nowrap"
-            title="Plan ID"
-          >
-            {copiedId ? (
-              <CheckIcon size={12} className="text-success" />
-            ) : (
-              <CopyIcon size={12} />
-            )}
-            {encodedId}
-          </button>
-        </div>
+      {/* Bottom: copy link + ID inline on one row */}
+      <div className="mt-auto pt-5 border-t border-border-subtle flex items-center gap-2">
+        <button
+          onClick={handleCopyLink}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-accent-subtle text-accent hover:bg-accent hover:text-white transition-colors text-xs font-medium"
+        >
+          {copiedLink ? (
+            <>
+              <CheckIcon size={12} />
+              Link copied
+            </>
+          ) : (
+            <>
+              <ExternalLinkIcon size={12} />
+              Copy checkout link
+            </>
+          )}
+        </button>
+        <button
+          onClick={handleCopyId}
+          className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs text-muted hover:text-foreground hover:bg-surface transition-colors font-mono shrink-0"
+          title="Plan ID"
+        >
+          {copiedId ? (
+            <CheckIcon size={12} className="text-success" />
+          ) : (
+            <CopyIcon size={12} />
+          )}
+          {encodedId}
+        </button>
       </div>
     </div>
   );
