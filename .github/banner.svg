@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="Vowena Dashboard">
+  <title>Vowena Dashboard</title>
+  <desc>The merchant and subscriber dashboard for the Vowena recurring payments protocol on Stellar.</desc>
+
+  <defs>
+    <!-- Deep violet base gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F0F16"/>
+      <stop offset="55%" stop-color="#13102C"/>
+      <stop offset="100%" stop-color="#1A0F52"/>
+    </linearGradient>
+
+    <!-- Soft violet halo behind logo -->
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6B4EFF" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#6B4EFF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#6B4EFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Right-side data viz fade -->
+    <linearGradient id="lineFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6B4EFF" stop-opacity="0"/>
+      <stop offset="40%" stop-color="#6B4EFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#B5A8FF" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <linearGradient id="areaFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6B4EFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#6B4EFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Subtle grain via fine noise dots -->
+    <pattern id="grain" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="transparent"/>
+      <circle cx="1" cy="1" r="0.35" fill="#FFFFFF" fill-opacity="0.018"/>
+    </pattern>
+
+    <!-- Hairline grid for the chart area -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+
+    <!-- Mask so the data viz fades from left to right -->
+    <linearGradient id="vizMask" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="20%" stop-color="#FFF" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#FFF" stop-opacity="1"/>
+    </linearGradient>
+    <mask id="vizFade">
+      <rect x="0" y="0" width="100%" height="100%" fill="url(#vizMask)"/>
+    </mask>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <rect width="1280" height="320" fill="url(#grain)"/>
+
+  <!-- Top hairline accent -->
+  <line x1="0" y1="0.5" x2="1280" y2="0.5" stroke="#FFFFFF" stroke-opacity="0.06"/>
+  <line x1="0" y1="319.5" x2="1280" y2="319.5" stroke="#FFFFFF" stroke-opacity="0.06"/>
+
+  <!-- =========================================================
+       RIGHT: dashboard data viz decoration
+       Faded grid, area chart, hairline plot, orbital ring,
+       a few data labels. Masked so it fades into the bg.
+       ========================================================= -->
+  <g mask="url(#vizFade)">
+    <!-- grid block -->
+    <g transform="translate(680 60)" opacity="0.9">
+      <rect x="0" y="0" width="560" height="200" fill="url(#grid)"/>
+    </g>
+
+    <!-- area chart (filled) -->
+    <g transform="translate(680 60)">
+      <path
+        d="M0 160
+           L 60 140
+           L 110 150
+           L 170 110
+           L 220 120
+           L 280 80
+           L 340 92
+           L 400 50
+           L 460 60
+           L 520 28
+           L 560 36
+           L 560 200
+           L 0 200 Z"
+        fill="url(#areaFade)"/>
+      <!-- top stroke of the area -->
+      <path
+        d="M0 160
+           L 60 140
+           L 110 150
+           L 170 110
+           L 220 120
+           L 280 80
+           L 340 92
+           L 400 50
+           L 460 60
+           L 520 28
+           L 560 36"
+        fill="none" stroke="url(#lineFade)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- end-of-line node -->
+      <circle cx="560" cy="36" r="3.25" fill="#B5A8FF"/>
+      <circle cx="560" cy="36" r="6" fill="#6B4EFF" fill-opacity="0.22"/>
+    </g>
+
+    <!-- hairline secondary trace (flat with a small bump) -->
+    <g transform="translate(680 60)" opacity="0.55">
+      <path d="M0 178 L 120 178 L 180 174 L 240 175 L 320 168 L 420 170 L 520 162 L 560 162"
+            fill="none" stroke="#9B85FF" stroke-width="1" stroke-dasharray="2 4" stroke-linecap="round"/>
+    </g>
+
+    <!-- vertical hairline ticks -->
+    <g transform="translate(680 60)" stroke="#FFFFFF" stroke-opacity="0.07">
+      <line x1="0"   y1="0" x2="0"   y2="200"/>
+      <line x1="140" y1="0" x2="140" y2="200"/>
+      <line x1="280" y1="0" x2="280" y2="200"/>
+      <line x1="420" y1="0" x2="420" y2="200"/>
+      <line x1="560" y1="0" x2="560" y2="200"/>
+    </g>
+
+    <!-- floating metric chips -->
+    <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+      <g transform="translate(870 86)">
+        <rect x="0" y="0" width="118" height="44" rx="8" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.08"/>
+        <text x="12" y="18" font-size="9" letter-spacing="2" fill="#B5A8FF" font-weight="600">MRR</text>
+        <text x="12" y="35" font-size="14" fill="#F4F4F5" font-weight="600">$24,180</text>
+        <circle cx="106" cy="14" r="3" fill="#00DC82"/>
+      </g>
+      <g transform="translate(1010 110)">
+        <rect x="0" y="0" width="118" height="44" rx="8" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.08"/>
+        <text x="12" y="18" font-size="9" letter-spacing="2" fill="#B5A8FF" font-weight="600">ACTIVE</text>
+        <text x="12" y="35" font-size="14" fill="#F4F4F5" font-weight="600">1,287</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Far right orbital ring, very subtle -->
+  <g transform="translate(1180 70)" opacity="0.55">
+    <circle cx="0" cy="0" r="44" fill="none" stroke="#6B4EFF" stroke-opacity="0.18" stroke-width="1"/>
+    <circle cx="0" cy="0" r="64" fill="none" stroke="#6B4EFF" stroke-opacity="0.10" stroke-width="1"/>
+    <circle cx="44" cy="0" r="2.25" fill="#B5A8FF"/>
+  </g>
+
+  <!-- =========================================================
+       LEFT: logo + wordmark + subtitle + tagline
+       ========================================================= -->
+
+  <!-- Halo behind the loop -->
+  <circle cx="148" cy="160" r="120" fill="url(#halo)"/>
+
+  <!-- Loop mark, scaled from 80x80 viewBox -->
+  <g transform="translate(80 92) scale(1.7)">
+    <path d="M44 18C44 18 28 22 24 40C20 58 36 62 36 62"
+          stroke="#B5A8FF" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <path d="M36 62C36 62 52 58 56 40C60 22 44 18 44 18"
+          stroke="#6B4EFF" stroke-width="4.5" stroke-linecap="round" fill="none" opacity="0.55"/>
+    <circle cx="40" cy="40" r="3.2" fill="#B5A8FF"/>
+  </g>
+
+  <!-- Wordmark + subtitle + tagline block -->
+  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" fill="#F4F4F5">
+    <!-- vertical divider between mark and text -->
+    <line x1="252" y1="118" x2="252" y2="202" stroke="#FFFFFF" stroke-opacity="0.10"/>
+
+    <!-- Wordmark -->
+    <text x="276" y="170" font-size="68" font-weight="600" letter-spacing="-2.05" fill="#F4F4F5">vowena</text>
+
+    <!-- Subtitle -->
+    <text x="278" y="124" font-size="11" font-weight="600" letter-spacing="2" fill="#B5A8FF">DASHBOARD</text>
+
+    <!-- Tagline -->
+    <text x="278" y="200" font-size="15" font-weight="400" fill="#B0ADBF">
+      Merchants ship plans. Subscribers stay in control. The chain is the source of truth.
+    </text>
+  </g>
+</svg>
